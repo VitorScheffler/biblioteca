@@ -1,0 +1,45 @@
+body {
+    background-color: #f5f5f5;
+}
+
+#library .card {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#library .card:hover {
+    transform: scale(1.03);
+}
+
+#pdf-canvas {
+    display: block;
+    margin: auto;
+    border: 1px solid #ccc;
+}
+
+#reader-container {
+    text-align: center;
+}
+
+#pdf-viewer {
+    height: 80vh;
+    overflow-y: auto;
+    background: #eaeaea;
+    padding: 20px;
+}
+
+.pdf-page {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+canvas {
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    background: white;
+}
+
+/* Tela cheia */
+.fullscreen #pdf-viewer {
+    height: 100vh;
+}
