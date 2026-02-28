@@ -18,10 +18,13 @@
   <div class="container-fluid">
     <a id="btn-back" class="btn btn-sm btn-light">← Biblioteca</a>
     <div class="d-flex gap-2 align-items-center">
-      <button id="btn-fullscreen" class="btn btn-sm btn-dark">⛶ Tela cheia</button>
-      <button id="btn-zoom-out" class="btn btn-sm btn-outline-light">-</button>
-      <button id="btn-zoom-in" class="btn btn-sm btn-outline-light">+</button>
-      <button id="btn-fit" class="btn btn-sm btn-outline-light">Ajustar largura</button>
+      <button id="btn-fullscreen" class="btn btn-sm btn-dark" title="Tela cheia">⛶</button>
+      <button id="btn-zoom-out" class="btn btn-sm btn-outline-light" title="Diminuir zoom">-</button>
+      <button id="btn-zoom-in" class="btn btn-sm btn-outline-light" title="Aumentar zoom">+</button>
+      <button id="btn-fit" class="btn btn-sm btn-outline-light" title="Ajustar largura">🔳</button>
+      <button id="btn-download" class="btn btn-sm btn-outline-light" title="Baixar PDF">⬇</button>
+      <button id="btn-print" class="btn btn-sm btn-outline-light" title="Imprimir">🖨</button>
+      <input id="goto-page" class="form-control form-control-sm ms-2" style="width:90px" type="number" min="1" placeholder="Ir p/" aria-label="Ir para página">
       <span id="progress" class="text-light ms-2">0%</span>
       <span id="page-info" class="text-light ms-2">— / —</span>
     </div>
@@ -30,7 +33,7 @@
 
 <main class="container-fluid p-0">
   <section id="reader-wrapper" class="reader-card">
-    <div id="pdf-viewer" class="reader-body"></div>
+    <div id="pdf-viewer" class="reader-body" tabindex="0" role="region" aria-label="Área de leitura"></div>
   </section>
 </main>
 

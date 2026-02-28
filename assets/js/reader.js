@@ -1,262 +1,187 @@
 // assets/js/reader.js
 (() => {
-  // elementos
   const viewer = document.getElementById("pdf-viewer");
   const btnBack = document.getElementById("btn-back");
   const btnFullscreen = document.getElementById("btn-fullscreen");
   const btnZoomIn = document.getElementById("btn-zoom-in");
   const btnZoomOut = document.getElementById("btn-zoom-out");
   const btnFit = document.getElementById("btn-fit");
+  const btnDownload = document.getElementById("btn-download");
+  const btnPrint = document.getElementById("btn-print");
   const progressEl = document.getElementById("progress");
   const pageInfoEl = document.getElementById("page-info");
   const readerCard = document.getElementById("reader-wrapper");
+  const gotoPageEl = document.getElementById("goto-page");
 
-  // PDF.js check
   if (!window.pdfjsLib) {
-    viewer.innerHTML = '<div class="warn">PDF.js não carregou. Verifique CDN ou baixe localmente.</div>';
-    console.warn("pdfjsLib não encontrado");
+    viewer.innerHTML = "<div class='warn'>PDF.js não carregou</div>";
     return;
   }
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // estado
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
   let pdfDoc = null;
-  let currentFile = null;
   let zoomFactor = 1.0;
   let renderedPages = new Set();
   let observer = null;
 
-  // lê param ?file=
   function getParam(name) {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
+    return new URL(window.location.href).searchParams.get(name);
   }
 
-  const file = getParam('file');
-  if (!file) {
-    viewer.innerHTML = '<div class="warn">Nenhum arquivo selecionado. Volte para a biblioteca.</div>';
+  const currentFile = decodeURIComponent(getParam("file") || "");
+  if (!currentFile) {
+    viewer.innerHTML = "<div class='warn'>Nenhum PDF selecionado</div>";
     return;
   }
-  currentFile = decodeURIComponent(file);
 
-  // voltar para biblioteca
-  btnBack.addEventListener("click", () => { window.location.href = 'index.html'; });
+  btnBack.addEventListener("click", () => {
+    window.location.href = "index.html";
+  });
 
-  // carregar PDF
   function openPDF() {
     const url = `books/${currentFile}`;
+
+    btnDownload.addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = currentFile;
+      a.click();
+    });
+
+    btnPrint.addEventListener("click", () => {
+      window.open(url, "_blank").print();
+    });
+
     pdfjsLib.getDocument(url).promise.then(pdf => {
       pdfDoc = pdf;
-      // criar placeholders
-      for (let i=1;i<=pdfDoc.numPages;i++){
-        const wrapper = document.createElement("div");
-        wrapper.className = "pdf-page";
-        wrapper.dataset.page = i;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const pageDiv = document.createElement("div");
+        pageDiv.className = "pdf-page";
+        pageDiv.dataset.page = i;
+
         const canvas = document.createElement("canvas");
-        canvas.dataset.rendered = "false";
-        wrapper.appendChild(canvas);
-        viewer.appendChild(wrapper);
+        pageDiv.appendChild(canvas);
+        viewer.appendChild(pageDiv);
       }
 
-      // observe com root=viewer
       observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const wrapper = entry.target;
-            const pageNum = parseInt(wrapper.dataset.page,10);
-            if (!renderedPages.has(pageNum)) renderPage(pageNum);
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            const n = parseInt(e.target.dataset.page, 10);
+            if (!renderedPages.has(n)) renderPage(n);
           }
         });
-      }, { root: viewer, rootMargin: '800px 0px 800px 0px', threshold: 0.1 });
+      }, {
+        root: viewer,
+        rootMargin: "800px 0px",
+        threshold: 0.1
+      });
 
-      document.querySelectorAll('.pdf-page').forEach(w => observer.observe(w));
+      document.querySelectorAll(".pdf-page")
+        .forEach(p => observer.observe(p));
 
-      // scroll até a página salva
       const saved = parseInt(localStorage.getItem(`page-${currentFile}`) || "1", 10);
-      setTimeout(()=> {
+      setTimeout(() => {
         const el = document.querySelector(`[data-page="${saved}"]`);
-        if (el) el.scrollIntoView({block:'start', behavior:'auto'});
-        updateProgress();
+        if (el) el.scrollIntoView();
       }, 300);
-
-    }).catch(err => {
-      console.error("Erro ao abrir PDF", err);
-      viewer.innerHTML = `<div class="warn">Erro ao carregar PDF (veja console)</div>`;
     });
   }
 
-  // render page
-  function renderPage(pageNum){
-    if (!pdfDoc) return;
+  function renderPage(pageNum) {
     if (renderedPages.has(pageNum)) return;
 
-    const wrapper = document.querySelector(`[data-page="${pageNum}"]`);
-    const canvas = wrapper.querySelector('canvas');
-    canvas.dataset.rendered = "true";
-
     pdfDoc.getPage(pageNum).then(page => {
-      // calcular escala: target width = min(window width * 0.96, 900) * zoomFactor
+      const wrapper = document.querySelector(`[data-page="${pageNum}"]`);
+      const canvas = wrapper.querySelector("canvas");
+
+      const baseViewport = page.getViewport({ scale: 1 });
       const targetWidth = Math.min(window.innerWidth * 0.96, 900) * zoomFactor;
-      const viewport0 = page.getViewport({ scale: 1.0 });
-      const scale = (targetWidth / viewport0.width);
-      const vp = page.getViewport({ scale });
+      const scale = targetWidth / baseViewport.width;
+      const viewport = page.getViewport({ scale });
 
-      canvas.width = Math.floor(vp.width);
-      canvas.height = Math.floor(vp.height);
-      canvas.style.width = '100%';
-      canvas.style.height = 'auto';
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = "100%";
 
-      const ctx = canvas.getContext('2d');
-      page.render({ canvasContext: ctx, viewport: vp }).promise.then(() => {
+      page.render({
+        canvasContext: canvas.getContext("2d"),
+        viewport
+      }).promise.then(() => {
         renderedPages.add(pageNum);
         updateProgress();
-      }).catch(err => console.warn('render error', err));
+      });
     });
   }
 
-  // atualizar progresso baseado na página mais central visível
-  function updateProgress(){
-    if (!pdfDoc) return;
-    const pages = Array.from(document.querySelectorAll('.pdf-page'));
+  function updateProgress() {
+    const pages = document.querySelectorAll(".pdf-page");
     if (!pages.length) return;
 
-    const viewerRect = viewer.getBoundingClientRect();
-    const viewerCenter = viewerRect.top + viewerRect.height/2;
-
-    let bestPage = 1;
+    let best = 1;
     let bestDist = Infinity;
+    const center = viewer.getBoundingClientRect().top + viewer.clientHeight / 2;
+
     pages.forEach(p => {
       const r = p.getBoundingClientRect();
-      const center = r.top + r.height/2;
-      const dist = Math.abs(center - viewerCenter);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestPage = parseInt(p.dataset.page,10);
+      const d = Math.abs((r.top + r.height / 2) - center);
+      if (d < bestDist) {
+        bestDist = d;
+        best = parseInt(p.dataset.page, 10);
       }
     });
 
-    const percent = Math.floor((bestPage / pdfDoc.numPages) * 100);
-    progressEl.innerText = percent + '%';
-    pageInfoEl.innerText = `Página ${bestPage} / ${pdfDoc.numPages}`;
-    localStorage.setItem(`page-${currentFile}`, bestPage);
+    progressEl.innerText = Math.floor((best / pdfDoc.numPages) * 100) + "%";
+    pageInfoEl.innerText = `Página ${best} / ${pdfDoc.numPages}`;
+    localStorage.setItem(`page-${currentFile}`, best);
   }
 
-  // scroll listener (debounced)
-  let st = null;
-  viewer.addEventListener('scroll', () => {
-    if (st) clearTimeout(st);
-    st = setTimeout(updateProgress, 120);
-  }, { passive:true });
+  viewer.addEventListener("scroll", () => {
+    clearTimeout(viewer._t);
+    viewer._t = setTimeout(updateProgress, 120);
+  }, { passive: true });
 
-  // zoom controls
-  btnZoomIn.addEventListener('click', () => { zoomFactor = Math.min(zoomFactor + 0.15, 3.0); rerenderPages(); });
-  btnZoomOut.addEventListener('click', () => { zoomFactor = Math.max(zoomFactor - 0.15, 0.5); rerenderPages(); });
-  btnFit.addEventListener('click', () => { zoomFactor = 1.0; rerenderPages(); });
+  btnZoomIn.addEventListener("click", () => {
+    zoomFactor = Math.min(zoomFactor + 0.15, 3);
+    rerender();
+  });
 
-  function rerenderPages(){
-    // desconecta observer
+  btnZoomOut.addEventListener("click", () => {
+    zoomFactor = Math.max(zoomFactor - 0.15, 0.5);
+    rerender();
+  });
+
+  btnFit.addEventListener("click", () => {
+    zoomFactor = 1;
+    rerender();
+  });
+
+  function rerender() {
     if (observer) observer.disconnect();
     renderedPages.clear();
-    // recria canvas (force)
-    document.querySelectorAll('.pdf-page').forEach(p => {
-      const old = p.querySelector('canvas');
-      const n = document.createElement('canvas');
-      n.dataset.rendered = "false";
-      p.replaceChild(n, old);
-    });
-    // re-observe e render novamente quando visível
-    observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const pageNum = parseInt(entry.target.dataset.page,10);
-          if (!renderedPages.has(pageNum)) renderPage(pageNum);
-        }
-      });
-    }, { root: viewer, rootMargin: '800px 0px 800px 0px', threshold: 0.1 });
-    document.querySelectorAll('.pdf-page').forEach(w => observer.observe(w));
+    viewer.querySelectorAll("canvas").forEach(c => c.remove());
+    viewer.innerHTML = "";
+    openPDF();
   }
 
-  // FULLSCREEN handling (robusto, com fallback simulado)
-  async function enterFullscreen() {
-    try {
-      // tentativa padrão
-      if (readerCard.requestFullscreen) {
-        await readerCard.requestFullscreen();
-        readerCard.classList.add('fullscreen');
-        return true;
-      }
-      // vendor-prefixed
-      if (readerCard.webkitRequestFullscreen) { readerCard.webkitRequestFullscreen(); readerCard.classList.add('fullscreen'); return true; }
-      if (readerCard.msRequestFullscreen) { readerCard.msRequestFullscreen(); readerCard.classList.add('fullscreen'); return true; }
-      // tentar no documentElement
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-        readerCard.classList.add('fullscreen');
-        return true;
-      }
-    } catch (err) {
-      console.warn('Fullscreen API erro:', err);
-    }
-
-    // FALLBACK SIMULADO (para iOS/Safari e outros)
-    simulateFullscreen();
-    return false;
-  }
-
-  function exitFullscreen() {
-    try {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-      }
-    } catch (err) {
-      console.warn('exitFullscreen error', err);
-    }
-    // remover classes/fallback
-    readerCard.classList.remove('fullscreen');
-    document.body.style.overflow = '';
-    readerCard.classList.remove('simulated-fullscreen');
-  }
-
-  function simulateFullscreen(){
-    // adiciona classe que fixa o leitor na tela e impede scroll no body
-    readerCard.classList.add('simulated-fullscreen');
-    document.body.style.overflow = 'hidden';
-    // rolar o readerCard para topo
-    readerCard.scrollIntoView({behavior:'auto'});
-  }
-
-  // toggle fullscreen
-  let isSimFullscreen = false;
-  btnFullscreen.addEventListener('click', async () => {
-    // se já em Fullscreen (API) ou simulated
-    if (document.fullscreenElement || readerCard.classList.contains('simulated-fullscreen')) {
-      exitFullscreen();
-      return;
-    }
-    await enterFullscreen();
-  });
-
-  // ao sair do fullscreen via UI do navegador, limpamos classes
-  document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) {
-      readerCard.classList.remove('fullscreen');
+  btnFullscreen.addEventListener("click", async () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      readerCard.requestFullscreen?.();
     }
   });
 
-  // resize: refaz render das páginas visíveis
-  let rt = null;
-  window.addEventListener('resize', () => {
-    if (rt) clearTimeout(rt);
-    rt = setTimeout(() => {
-      rerenderPages();
-    }, 200);
+  gotoPageEl?.addEventListener("change", e => {
+    const n = parseInt(e.target.value, 10);
+    if (!isNaN(n)) {
+      const el = document.querySelector(`[data-page="${n}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
   });
 
-  // iniciar
   openPDF();
-
 })();

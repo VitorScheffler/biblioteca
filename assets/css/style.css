@@ -1,53 +1,36 @@
+/* Geral */
 :root{
-  --bg:#f5f6f8;
-  --card:#ffffff;
-  --muted:#6c757d;
+  --nav-height:56px;
 }
-
-*{box-sizing:border-box}
-html,body{height:100%; margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-body{background:var(--bg); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale}
+body{font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#0f1720; color:#e6eef8;}
+.container{max-width:1100px}
 
 /* Biblioteca */
-#library { margin-top: 12px; }
-.book-card { cursor:pointer; transition: transform .15s, box-shadow .15s; min-height:120px; display:flex; align-items:center; padding:12px; background:var(--card); border-radius:8px; }
-.book-card:hover{ transform:translateY(-6px); box-shadow:0 10px 30px rgba(0,0,0,0.06); }
-.book-thumb{ width:72px; height:96px; background: linear-gradient(180deg,#e9e9ef,#fff); border-radius:6px; margin-right:12px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#333; border:1px solid rgba(0,0,0,0.04); flex-shrink:0; }
-.book-meta h6{ margin:0; font-size:1rem; }
-.book-meta small{ color:var(--muted); }
+.book-card{background:linear-gradient(180deg,#0b1220 0%, #0f2436 100%); border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; box-shadow:0 4px 12px rgba(2,6,23,0.6);}
+.book-card:hover{transform:translateY(-4px); box-shadow:0 8px 20px rgba(2,6,23,0.75);}
+.book-thumb{width:56px;height:72px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;background:linear-gradient(180deg,#1f2937,#111827);color:#fff;flex:0 0 56px}
+.book-meta h6{margin:0 0 4px 0;font-size:14px}
+.book-meta small{color:#9fb0c8}
+.search-input{width:220px}
 
-/* Leitor principal */
-.reader-card { display:flex; flex-direction:column; height: calc(100vh - 56px); background:var(--card); border-radius:0; overflow:hidden; }
-.reader-card.fullscreen { position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999; height:100vh; width:100vw; border-radius:0; }
+/* Reader */
+.reader-card{padding:12px; height:calc(100vh - var(--nav-height) - 12px); box-sizing:border-box; background:linear-gradient(180deg,#08121a,#071421);}
+.reader-body{height:100%; overflow:auto; padding:18px; display:block}
+.pdf-page{margin-bottom:18px; display:flex; justify-content:center}
+.pdf-page canvas{border-radius:8px; box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+.warn{padding:18px; background:#2b2630; border-radius:8px}
 
-/* topbar do leitor (navbar já cobre) */
-.reader-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling: touch; background:#e9eef6; padding:12px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+/* simulated fullscreen (mobile fallback) */
+.reader-card.simulated-fullscreen, .reader-card.fullscreen{position:fixed; inset:0; z-index:9999; padding:12px; height:100dvh}
+.reader-card.simulated-fullscreen .reader-body{height:calc(100dvh - var(--nav-height) - 12px)}
 
-/* página / canvas */
-.pdf-page { width:100%; display:flex; justify-content:center; margin-bottom:14px; }
-.pdf-page canvas { width:100%; height:auto; max-width:900px; background:white; border-radius:6px; box-shadow:0 6px 20px rgba(2,6,23,0.06); border:1px solid rgba(0,0,0,0.04); }
+/* when simulated, prevent body scroll */
+.simulated-fullscreen + *{pointer-events:none}
 
-/* fallback 'simulado' fullscreen (quando Fullscreen API não existe/no iOS) */
-.simulated-fullscreen {
-  position: fixed !important;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 9999;
-  background: #ffffff;
+/* responsive */
+@media (max-width:576px){
+  .book-thumb{width:72px;height:88px;font-size:20px}
+  .search-input{display:none}
+  .reader-card{padding:8px}
+  .book-meta h6{font-size:13px}
 }
-.simulated-fullscreen .reader-body { height: calc(100vh - 52px); }
-
-/* botão e touch */
-button{ min-width:44px; min-height:38px; }
-
-/* warnings */
-.warn { padding:10px; background:#fff3cd; border-radius:6px; border:1px solid #ffeeba; color:#7a5b00; }
-
-/* mobile tweaks */
-@media (max-width:768px){
-  .book-thumb{ width:56px; height:76px; }
-  .book-meta h6{ font-size:0.95rem; }
-  .reader-card{ height: calc(100vh - 48px); }
-  .pdf-page canvas{ border-radius:4px; box-shadow:none; }
-  .reader-body{ padding:8px; }
-}
-
