@@ -1,41 +1,47 @@
 (() => {
   const viewer = document.getElementById("pdf-viewer");
-  const back = document.getElementById("btn-back");
-  const pageInfo = document.getElementById("page-info");
-
-  back.onclick = () => location.href = "index.html";
-
-  const params = new URLSearchParams(location.search);
-  const file = params.get("file");
-  if (!file) return;
+  const reader = document.getElementById("reader-wrapper");
+  const btnBack = document.getElementById("btn-back");
+  const btnNight = document.getElementById("btn-night");
+  const btnFs = document.getElementById("btn-fullscreen");
+  const navbar = document.querySelector(".navbar");
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-  let pdfDoc;
-  let progress = {};
+  let pdfDoc = null;
+  let rendered = new Set();
+  let zoom = 1;
+  let lastScroll = 0;
 
-  async function loadProgress() {
-    const res = await fetch("/api/progress");
-    progress = await res.json();
+  const file = new URL(location.href).searchParams.get("file");
+  if (!file) return;
+
+  btnBack.onclick = () => location.href = "index.html";
+
+  btnNight.onclick = () => {
+    reader.classList.toggle("night-mode");
+    localStorage.setItem("night",
+      reader.classList.contains("night-mode"));
+  };
+
+  if (localStorage.getItem("night") === "true") {
+    reader.classList.add("night-mode");
   }
 
-  async function saveProgress(page) {
-    progress[file] = {
-      page,
-      updated: new Date().toISOString()
-    };
+  btnFs.onclick = () => {
+    reader.requestFullscreen?.();
+  };
 
-    fetch("/api/progress", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(progress)
-});
-  }
+  viewer.addEventListener("scroll", () => {
+    const st = viewer.scrollTop;
+    if (st > lastScroll + 10) navbar.classList.add("hide");
+    if (st < lastScroll - 10) navbar.classList.remove("hide");
+    lastScroll = st;
+  }, { passive: true });
 
-  pdfjsLib.getDocument(`books/${file}`).promise.then(async pdf => {
+  pdfjsLib.getDocument(`books/${file}`).promise.then(pdf => {
     pdfDoc = pdf;
-    await loadProgress();
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const div = document.createElement("div");
@@ -45,53 +51,38 @@
       viewer.appendChild(div);
     }
 
-    if (progress[file]?.page) {
-      setTimeout(() => {
-        document
-          .querySelector(`[data-page="${progress[file].page}"]`)
-          ?.scrollIntoView({ behavior: "auto" });
-      }, 300);
-    }
-
-    const observer = new IntersectionObserver(entries => {
+    const io = new IntersectionObserver(entries => {
       entries.forEach(e => {
-        if (!e.isIntersecting) return;
-
-        const pageNum = +e.target.dataset.page;
-        renderPage(pageNum);
-        saveProgress(pageNum);
-
-        pageInfo.textContent =
-          `Página ${pageNum} / ${pdfDoc.numPages}`;
+        if (e.isIntersecting) renderPage(+e.target.dataset.page);
       });
-    }, {
-      root: viewer,
-      rootMargin: "600px"
-    });
+    }, { root: viewer, rootMargin: "600px" });
 
-    document.querySelectorAll(".pdf-page")
-      .forEach(p => observer.observe(p));
+    document.querySelectorAll(".pdf-page").forEach(p => io.observe(p));
   });
 
   function renderPage(n) {
-    const canvas = document.querySelector(
-      `[data-page="${n}"] canvas`
-    );
-    if (canvas.dataset.rendered) return;
-    canvas.dataset.rendered = "1";
+    if (rendered.has(n)) return;
 
     pdfDoc.getPage(n).then(page => {
-      const vp = page.getViewport({ scale: 1.4 });
+      const canvas = document.querySelector(`[data-page="${n}"] canvas`);
+      const base = page.getViewport({ scale: 1 });
+
+      const width = Math.min(innerWidth * 0.96, 900) * zoom;
+      const scale = width / base.width;
+      const vp = page.getViewport({ scale });
+
       const dpr = Math.min(devicePixelRatio || 1, 2);
 
       canvas.width = vp.width * dpr;
       canvas.height = vp.height * dpr;
       canvas.style.width = vp.width + "px";
+      canvas.style.height = vp.height + "px";
 
       const ctx = canvas.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       page.render({ canvasContext: ctx, viewport: vp });
+      rendered.add(n);
     });
   }
 })();
