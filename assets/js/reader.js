@@ -12,6 +12,7 @@
   const pageInfoEl = document.getElementById("page-info");
   const readerCard = document.getElementById("reader-wrapper");
   const gotoPageEl = document.getElementById("goto-page");
+  const btnNight = document.getElementById("btn-night");
 
   if (!window.pdfjsLib) {
     viewer.innerHTML = "<div class='warn'>PDF.js não carregou</div>";
@@ -26,6 +27,7 @@
   let renderedPages = new Set();
   let observer = null;
 
+  
   function getParam(name) {
     return new URL(window.location.href).searchParams.get(name);
   }
@@ -194,6 +196,31 @@
       if (el) el.scrollIntoView({ behavior: "smooth" });
     }
   });
+
+  function enableNightMode() {
+    readerCard.classList.add("night-mode");
+    btnNight.classList.add("active");
+    localStorage.setItem("night-mode", "on");
+  }
+
+  function disableNightMode() {
+    readerCard.classList.remove("night-mode");
+    btnNight.classList.remove("active");
+    localStorage.setItem("night-mode", "off");
+  }
+
+  btnNight.addEventListener("click", () => {
+  if (readerCard.classList.contains("night-mode")) {
+    disableNightMode();
+  } else {
+    enableNightMode();
+  }
+});
+
+// restaurar modo noturno salvo
+if (localStorage.getItem("night-mode") === "on") {
+  enableNightMode();
+}
 
   openPDF();
 })();

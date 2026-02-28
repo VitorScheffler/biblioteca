@@ -34,3 +34,33 @@ body{font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetic
   .reader-card{padding:8px}
   .book-meta h6{font-size:13px}
 }
+
+/* =========================
+   MODO LEITURA NOTURNO
+   ========================= */
+
+/* botão ativo */
+.btn-night.active {
+  background: #facc15 !important;
+  color: #000 !important;
+}
+
+/* aplica filtro APENAS no conteúdo do PDF */
+.reader-card.night-mode .pdf-page canvas {
+  filter:
+    invert(1)
+    hue-rotate(180deg)
+    brightness(1.05)
+    contrast(1.05);
+}
+
+/* fundo do leitor */
+.reader-card.night-mode {
+  background: #020617 !important;
+}
+
+/* navbar noturna */
+.reader-card.night-mode ~ nav,
+.reader-card.night-mode .navbar {
+  background: #020617 !important;
+}
