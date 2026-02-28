@@ -16,7 +16,7 @@
   let progress = {};
 
   async function loadProgress() {
-    const res = await fetch("progress.php");
+    const res = await fetch("/api/progress");
     progress = await res.json();
   }
 
@@ -26,11 +26,11 @@
       updated: new Date().toISOString()
     };
 
-    await fetch("progress.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(progress)
-    });
+    fetch("/api/progress", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(progress)
+});
   }
 
   pdfjsLib.getDocument(`books/${file}`).promise.then(async pdf => {
