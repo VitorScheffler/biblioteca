@@ -92,24 +92,36 @@
   }
 
   function renderPage(pageNum) {
-    if (renderedPages.has(pageNum)) return;
+    if (!pdfDoc || renderedPages.has(pageNum)) return;
+
+    const wrapper = document.querySelector(`[data-page="${pageNum}"]`);
+    const canvas = wrapper.querySelector("canvas");
 
     pdfDoc.getPage(pageNum).then(page => {
-      const wrapper = document.querySelector(`[data-page="${pageNum}"]`);
-      const canvas = wrapper.querySelector("canvas");
 
-      const baseViewport = page.getViewport({ scale: 1 });
+      // largura alvo do PDF na tela
       const targetWidth = Math.min(window.innerWidth * 0.96, 900) * zoomFactor;
-      const scale = targetWidth / baseViewport.width;
-      const viewport = page.getViewport({ scale });
 
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = "100%";
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = targetWidth / viewport.width;
+
+      const scaledViewport = page.getViewport({ scale });
+
+      // 🔥 CORREÇÃO DE QUALIDADE (DPI)
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width  = Math.floor(scaledViewport.width * dpr);
+      canvas.height = Math.floor(scaledViewport.height * dpr);
+
+      canvas.style.width  = `${scaledViewport.width}px`;
+      canvas.style.height = `${scaledViewport.height}px`;
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       page.render({
-        canvasContext: canvas.getContext("2d"),
-        viewport
+        canvasContext: ctx,
+        viewport: scaledViewport
       }).promise.then(() => {
         renderedPages.add(pageNum);
         updateProgress();
