@@ -1,66 +1,86 @@
-/* Geral */
-:root{
-  --nav-height:56px;
+:root {
+  --nav-h: 56px;
 }
-body{font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#0f1720; color:#e6eef8;}
-.container{max-width:1100px}
+
+body {
+  margin: 0;
+  background: #020617;
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+}
 
 /* Biblioteca */
-.book-card{background:linear-gradient(180deg,#0b1220 0%, #0f2436 100%); border-radius:12px; padding:12px; display:flex; gap:10px; align-items:center; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; box-shadow:0 4px 12px rgba(2,6,23,0.6);}
-.book-card:hover{transform:translateY(-4px); box-shadow:0 8px 20px rgba(2,6,23,0.75);}
-.book-thumb{width:56px;height:72px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;background:linear-gradient(180deg,#1f2937,#111827);color:#fff;flex:0 0 56px}
-.book-meta h6{margin:0 0 4px 0;font-size:14px}
-.book-meta small{color:#9fb0c8}
-.search-input{width:220px}
+.book-card {
+  background: #0b1220;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.book-thumb {
+  width: 56px;
+  height: 72px;
+  background: #111827;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.book-meta h6 {
+  margin: 0;
+  font-size: 14px;
+}
 
 /* Reader */
-.reader-card{padding:12px; height:calc(100vh - var(--nav-height) - 12px); box-sizing:border-box; background:linear-gradient(180deg,#08121a,#071421);}
-.reader-body{height:100%; overflow:auto; padding:18px; display:block}
-.pdf-page{margin-bottom:18px; display:flex; justify-content:center}
-
-.warn{padding:18px; background:#2b2630; border-radius:8px}
-
-/* simulated fullscreen (mobile fallback) */
-.reader-card.simulated-fullscreen, .reader-card.fullscreen{position:fixed; inset:0; z-index:9999; padding:12px; height:100dvh}
-.reader-card.simulated-fullscreen .reader-body{height:calc(100dvh - var(--nav-height) - 12px)}
-
-/* when simulated, prevent body scroll */
-.simulated-fullscreen + *{pointer-events:none}
-
-/* responsive */
-@media (max-width:576px){
-  .book-thumb{width:72px;height:88px;font-size:20px}
-  .search-input{display:none}
-  .reader-card{padding:8px}
-  .book-meta h6{font-size:13px}
+.reader-card {
+  height: calc(100vh - var(--nav-h));
+  background: #020617;
 }
 
-/* =========================
-   MODO LEITURA NOTURNO
-   ========================= */
-
-/* botão ativo */
-.btn-night.active {
-  background: #facc15 !important;
-  color: #000 !important;
+.reader-body {
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px;
 }
 
-/* aplica filtro APENAS no conteúdo do PDF */
+.pdf-page {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.pdf-page canvas {
+  border-radius: 8px;
+}
+
+/* Navbar mobile auto-hide */
+@media (max-width: 768px) {
+  .navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 10000;
+    transition: transform 0.25s ease;
+  }
+
+  .navbar.hide {
+    transform: translateY(-100%);
+  }
+
+  .reader-card {
+    padding-top: var(--nav-h);
+  }
+}
+
+/* 🌙 Night Mode */
 .reader-card.night-mode .pdf-page canvas {
-  filter:
-    invert(1)
-    hue-rotate(180deg)
-    brightness(1.05)
-    contrast(1.05);
+  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(1.05);
 }
 
-/* fundo do leitor */
 .reader-card.night-mode {
-  background: #020617 !important;
-}
-
-/* navbar noturna */
-.reader-card.night-mode ~ nav,
-.reader-card.night-mode .navbar {
-  background: #020617 !important;
+  background: #000;
 }
