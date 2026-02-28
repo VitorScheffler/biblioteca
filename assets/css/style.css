@@ -17,7 +17,7 @@ body{font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetic
 .reader-card{padding:12px; height:calc(100vh - var(--nav-height) - 12px); box-sizing:border-box; background:linear-gradient(180deg,#08121a,#071421);}
 .reader-body{height:100%; overflow:auto; padding:18px; display:block}
 .pdf-page{margin-bottom:18px; display:flex; justify-content:center}
-.pdf-page canvas{border-radius:8px; box-shadow:0 6px 20px rgba(2,6,23,0.6);}
+
 .warn{padding:18px; background:#2b2630; border-radius:8px}
 
 /* simulated fullscreen (mobile fallback) */
