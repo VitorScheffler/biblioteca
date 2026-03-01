@@ -15,43 +15,231 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
-    body { background:#0b0d0f; color:#e6eef8; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
-    .book-cover { height:190px; object-fit:cover; border-top-left-radius: .375rem; border-top-right-radius: .375rem; }
-    .card { background:#0f1724; border:0; color:inherit; }
-    /* Modal small-screen fullscreen tweak */
+    :root {
+      --bg-primary: #0b0d0f;
+      --bg-secondary: #0f1724;
+      --text-primary: #e6eef8;
+      --accent: #2b82ff;
+      --card-hover: #1a2536;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 2rem;
+    }
+
+    /* Cabeçalho com gradiente */
+    .site-header {
+      background: linear-gradient(145deg, #0f1724 0%, #0b0d0f 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding: 1.5rem 0;
+      margin-bottom: 2rem;
+      border-radius: 0 0 2rem 2rem;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    }
+
+    .site-header h1 {
+      font-weight: 600;
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .site-header p {
+      opacity: 0.7;
+      margin-bottom: 0;
+    }
+
+    /* Barra de pesquisa */
+    .search-box {
+      max-width: 400px;
+      margin: 1rem auto 0;
+    }
+
+    .search-box input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 40px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      backdrop-filter: blur(5px);
+      transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(43,130,255,0.2);
+      outline: none;
+    }
+
+    .search-box input::placeholder {
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Cards de livros */
+    .book-card {
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      background: var(--bg-secondary);
+      border: none;
+      border-radius: 16px;
+      overflow: hidden;
+      height: 100%;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    .book-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 30px rgba(0,0,0,0.5);
+      background: var(--card-hover);
+    }
+
+    .book-cover {
+      height: 200px;
+      object-fit: cover;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: #94a3b8;
+    }
+
+    .book-body {
+      padding: 1rem;
+    }
+
+    .book-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .book-author {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    /* Loading spinner */
+    .spinner-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 4rem 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Modal do leitor */
+    #readerModal .modal-content {
+      background: #071019;
+      border: none;
+      border-radius: 20px 20px 0 0;
+    }
+
+    #readerModal .modal-header {
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 0.75rem 1rem;
+      background: rgba(7,16,25,0.95);
+      backdrop-filter: blur(10px);
+    }
+
+    #readerModal .modal-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    #readerClearBtn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 30px;
+      padding: 0.25rem 1rem;
+      font-size: 0.8rem;
+      transition: 0.2s;
+    }
+
+    #readerClearBtn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    #readerClearBtn:active {
+      transform: scale(0.95);
+    }
+
     @media (max-width: 576px) {
-      #readerModal .modal-content { height: 100vh; border-radius: 0; background: #071019; }
-      #readerModal .modal-body { padding:0; }
-      #readerIframe { height: calc(100vh - var(--reader-header-height, 56px)); }
+      #readerModal .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+      }
+      #readerModal .modal-content {
+        border-radius: 0;
+        min-height: 100vh;
+      }
+      #readerIframe {
+        height: calc(100vh - 56px); /* 56px = altura do header */
+      }
     }
   </style>
 </head>
-<body class="p-3">
-  <div class="container">
-    <h3 class="mb-3">Minha Biblioteca</h3>
+<body>
 
-    <div id="emptyNotice" class="alert alert-warning d-none">Nenhum livro encontrado.</div>
-
-    <div class="row g-3" id="booksGrid"></div>
+  <!-- Cabeçalho com busca -->
+  <div class="site-header">
+    <div class="container text-center">
+      <h1>📚 Minha Biblioteca</h1>
+      <p class="text-light-emphasis">Toque em um livro para começar a ler</p>
+      <div class="search-box">
+        <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por título ou autor...">
+      </div>
+    </div>
   </div>
 
-  <!-- Modal: leitor -->
+  <div class="container">
+    <!-- Área de loading -->
+    <div id="loadingWrapper" class="spinner-wrapper">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Mensagem quando não há livros -->
+    <div id="emptyNotice" class="alert alert-warning d-none text-center">Nenhum livro encontrado.</div>
+
+    <!-- Grid de livros -->
+    <div class="row g-4" id="booksGrid"></div>
+  </div>
+
+  <!-- Modal do leitor -->
   <div class="modal fade" id="readerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-      <div class="modal-content bg-dark text-light">
-        <div class="modal-header py-2 px-3" id="readerHeader" style="--reader-header-height:56px;">
-          <div>
-            <h6 class="modal-title mb-0" id="readerTitle">Livro</h6>
-            <small id="readerAuthor" class="text-muted">Autor</small>
+      <div class="modal-content">
+        <div class="modal-header" id="readerHeader">
+          <div class="text-truncate pe-2">
+            <h6 class="modal-title" id="readerTitle">Carregando...</h6>
+            <small id="readerAuthor" class="text-muted d-block text-truncate"></small>
           </div>
-          <div class="d-flex gap-2 align-items-center">
-            <button id="readerClearBtn" class="btn btn-sm btn-outline-light">Limpar progresso</button>
+          <div class="d-flex gap-2 align-items-center flex-shrink-0">
+            <button id="readerClearBtn" class="btn btn-sm" title="Limpar progresso deste livro">🗑️ Limpar</button>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
           </div>
         </div>
-
-        <div class="modal-body p-0" style="height:calc(100vh - 56px);">
-          <!-- iframe que carrega viewer.html -->
+        <div class="modal-body p-0">
           <iframe id="readerIframe" src="" style="width:100%; height:100%; border:0;" title="Leitor de PDF"></iframe>
         </div>
       </div>
@@ -61,106 +249,146 @@
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Script de controle (carrega books.json e controla modal) -->
   <script>
-    const grid = document.getElementById('booksGrid');
-    const emptyNotice = document.getElementById('emptyNotice');
-    const readerIframe = document.getElementById('readerIframe');
-    const readerTitle = document.getElementById('readerTitle');
-    const readerAuthor = document.getElementById('readerAuthor');
-    const readerClearBtn = document.getElementById('readerClearBtn');
-    let currentBookFile = null;
+    (function() {
+      const grid = document.getElementById('booksGrid');
+      const emptyNotice = document.getElementById('emptyNotice');
+      const loadingWrapper = document.getElementById('loadingWrapper');
+      const readerIframe = document.getElementById('readerIframe');
+      const readerTitle = document.getElementById('readerTitle');
+      const readerAuthor = document.getElementById('readerAuthor');
+      const readerClearBtn = document.getElementById('readerClearBtn');
+      const searchInput = document.getElementById('searchInput');
 
-    fetch('books.json', { cache: 'no-store' })
-      .then(res => {
-        if(!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(data => {
-        if(!Array.isArray(data) || data.length === 0){
+      let allBooks = [];
+      let currentBookFile = null;
+      let modalInstance = null;
+
+      // Carrega a lista de livros
+      fetch('books.json', { cache: 'no-store' })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          loadingWrapper.style.display = 'none';
+          if (!Array.isArray(data) || data.length === 0) {
+            emptyNotice.classList.remove('d-none');
+            return;
+          }
+          allBooks = data;
+          renderBooks(allBooks);
+        })
+        .catch(err => {
+          console.error('Erro no books.json', err);
+          loadingWrapper.style.display = 'none';
+          emptyNotice.textContent = 'Erro ao carregar a lista. Verifique o console.';
+          emptyNotice.classList.remove('d-none');
+        });
+
+      // Renderiza os cards
+      function renderBooks(books) {
+        grid.innerHTML = '';
+        if (books.length === 0) {
           emptyNotice.classList.remove('d-none');
           return;
         }
-        renderBooks(data);
-      })
-      .catch(err => {
-        console.error('Erro carregando books.json', err);
-        emptyNotice.textContent = 'Erro carregando lista de livros. Verifique books.json (console para detalhes).';
-        emptyNotice.classList.remove('d-none');
-      });
+        emptyNotice.classList.add('d-none');
 
-    function renderBooks(books){
-      grid.innerHTML = '';
-      books.forEach(book => {
-        const col = document.createElement('div');
-        col.className = 'col-6 col-md-3';
+        books.forEach(book => {
+          const col = document.createElement('div');
+          col.className = 'col-6 col-md-4 col-lg-3';
 
-        const cover = book.cover && book.cover.trim() ? book.cover : '';
-        const coverHtml = cover
-          ? `<img src="${cover}" alt="${escapeHtml(book.title)}" class="book-cover w-100">`
-          : `<div style="height:190px;background:#e6edf6;color:#0b0d0f;display:flex;align-items:center;justify-content:center;font-weight:600">PDF</div>`;
+          const cover = book.cover?.trim() ? book.cover : '';
+          const coverHtml = cover
+            ? `<img src="${cover}" alt="${escapeHtml(book.title)}" class="book-cover w-100" loading="lazy">`
+            : `<div class="book-cover w-100"><span>📄</span></div>`;
 
-        col.innerHTML = `
-          <div class="card h-100 shadow-sm">
-            ${coverHtml}
-            <div class="card-body">
-              <h6 class="mb-1" style="font-size:14px">${escapeHtml(book.title)}</h6>
-              <small class="text-muted">${escapeHtml(book.author || '')}</small>
+          col.innerHTML = `
+            <div class="book-card">
+              ${coverHtml}
+              <div class="book-body">
+                <div class="book-title">${escapeHtml(book.title)}</div>
+                <div class="book-author">${escapeHtml(book.author || 'Autor desconhecido')}</div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
 
-        col.addEventListener('click', () => openReader(book));
-        grid.appendChild(col);
-      });
-    }
-
-    function openReader(book){
-      currentBookFile = book.file;
-      readerTitle.textContent = book.title || decodeURIComponent(book.file || '');
-      readerAuthor.textContent = book.author || '';
-
-      // adiciona minimalUI=1 para habilitar comportamento mobile-friendly no viewer
-      const src = `viewer.html?file=${encodeURIComponent(book.file)}&title=${encodeURIComponent(book.title || '')}&minimalUI=1`;
-      readerIframe.src = src;
-
-      const modalEl = document.getElementById('readerModal');
-      const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
-      modal.show();
-
-      modalEl.addEventListener('hidden.bs.modal', function onHidden(){
-        readerIframe.src = '';
-        document.getElementById('readerHeader').classList.remove('d-none');
-        modalEl.removeEventListener('hidden.bs.modal', onHidden);
-      }, { once:true });
-    }
-
-    readerClearBtn.addEventListener('click', ()=>{
-      if(!currentBookFile) return alert('Nenhum livro aberto.');
-      const key = 'pdf-progress-' + currentBookFile;
-      localStorage.removeItem(key);
-      alert('Progresso limpo para este livro.');
-    });
-
-    // recebe mensagens do viewer (iframe)
-    window.addEventListener('message', (ev) => {
-      if(!ev.data || typeof ev.data !== 'object') return;
-      const data = ev.data;
-      if(data.type === 'toggle_ui'){
-        const header = document.getElementById('readerHeader');
-        if(data.hidden) header.classList.add('d-none');
-        else header.classList.remove('d-none');
-      } else if(data.type === 'ui_hidden'){
-        document.getElementById('readerHeader').classList.add('d-none');
-      } else if(data.type === 'ui_shown'){
-        document.getElementById('readerHeader').classList.remove('d-none');
+          col.addEventListener('click', () => openReader(book));
+          grid.appendChild(col);
+        });
       }
-    });
 
-    function escapeHtml(s){
-      if(!s) return '';
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-    }
+      // Filtro de busca
+      searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        if (!term) {
+          renderBooks(allBooks);
+          return;
+        }
+        const filtered = allBooks.filter(book =>
+          book.title.toLowerCase().includes(term) ||
+          (book.author && book.author.toLowerCase().includes(term))
+        );
+        renderBooks(filtered);
+      });
+
+      // Abre o leitor
+      function openReader(book) {
+        currentBookFile = book.file;
+        readerTitle.textContent = book.title || 'Livro';
+        readerAuthor.textContent = book.author || '';
+
+        const src = `viewer.html?file=${encodeURIComponent(book.file)}&title=${encodeURIComponent(book.title || '')}&minimalUI=1`;
+        readerIframe.src = src;
+
+        const modalEl = document.getElementById('readerModal');
+        modalInstance = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+        modalInstance.show();
+
+        // Ao fechar, limpa iframe e remove listener único
+        modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+          readerIframe.src = '';
+          document.getElementById('readerHeader').classList.remove('d-none');
+          modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        }, { once: true });
+      }
+
+      // Limpa progresso
+      readerClearBtn.addEventListener('click', () => {
+        if (!currentBookFile) {
+          alert('Nenhum livro aberto.');
+          return;
+        }
+        const key = 'pdf-progress-' + currentBookFile;
+        localStorage.removeItem(key);
+        // Feedback visual no botão
+        readerClearBtn.textContent = '✔ Limpo!';
+        setTimeout(() => { readerClearBtn.textContent = '🗑️ Limpar'; }, 1500);
+      });
+
+      // Recebe mensagens do viewer (esconder/mostrar cabeçalho)
+      window.addEventListener('message', (ev) => {
+        if (!ev.data || typeof ev.data !== 'object') return;
+        const data = ev.data;
+        const header = document.getElementById('readerHeader');
+        if (data.type === 'toggle_ui' || data.type === 'ui_hidden') {
+          header.classList.add('d-none');
+        } else if (data.type === 'ui_shown') {
+          header.classList.remove('d-none');
+        }
+      });
+
+      // Função auxiliar para escapar HTML
+      function escapeHtml(s) {
+        if (!s) return '';
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+    })();
   </script>
 </body>
 </html>
