@@ -2,13 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
   <title>Leitor — PDF</title>
 
   <!-- PDF.js via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
   <script>
-    // worker
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
   </script>
@@ -19,9 +18,9 @@
       --text: #e6eef8;
       --accent: #2b82ff;
     }
-    html,body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
-    .viewer-root { height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
-    .canvas-area { max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center; overflow:auto; padding:20px; box-sizing:border-box; width:100%; height:100%; }
+    html,body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; -webkit-tap-highlight-color: transparent; }
+    .viewer-root { height:100dvh; height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; background:var(--bg); }
+    .canvas-area { max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center; overflow:auto; padding:20px; box-sizing:border-box; width:100%; height:100%; -webkit-overflow-scrolling: touch; }
     canvas.pdf-canvas { background:white; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); max-width:100%; height:auto; display:block; touch-action:pan-y pinch-zoom; }
 
     .progress-bar-wrap {
@@ -48,9 +47,8 @@
     .center-msg { position:absolute; top:12px; left:12px; font-size:13px; color:rgba(230,238,248,0.95); background: rgba(0,0,0,0.2); padding:6px 8px; border-radius:8px; z-index:70; backdrop-filter: blur(3px); }
 
     #fullscreenBtn{ position:fixed; top:14px; right:14px; z-index:80; background:rgba(255,255,255,0.06); border:none; color:#fff; font-size:18px; padding:8px 12px; border-radius:10px; cursor:pointer; backdrop-filter: blur(4px); }
-    #fullscreenBtn:active{ transform:scale(0.96); }
-
-    .fake-fullscreen{ position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; z-index:9999 !important; background:var(--bg); }
+    .fake-fullscreen{ position:fixed !important; inset:0 !important; width:100vw !important; height:100dvh !important; display:flex; align-items:center; justify-content:center; background:var(--bg); z-index:999999 !important; }
+    .ios-fullscreen { padding-bottom: env(safe-area-inset-bottom); padding-top: env(safe-area-inset-top); }
 
     .hidden-ui { opacity:0; pointer-events:none; }
 
@@ -112,6 +110,7 @@
   const storageKey = 'pdf-progress-' + file;
 
   const touchSupported = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const supportsFullscreenAPI = !!(Element.prototype.requestFullscreen && document.fullscreenEnabled);
 
   const saved = parseInt(localStorage.getItem(storageKey));
   if(!isNaN(saved) && saved >= 1) pageNum = saved;
@@ -125,10 +124,8 @@
     }
   }
 
-  // helper: post messages to parent to toggle modal header/menu
   function postToggleUI(hidden){
     try {
-      // two formats for compatibility: toggle_ui & ui_hidden/ui_shown
       parent.postMessage({ type: 'toggle_ui', hidden }, '*');
       parent.postMessage({ type: hidden ? 'ui_hidden' : 'ui_shown' }, '*');
     } catch(e){}
@@ -210,7 +207,7 @@
 
   // Click navigation: disabled on touch devices (prevents double-trigger)
   canvas.addEventListener('click', (e)=>{
-    if(touchSupported) return; // evita trigger duplo em dispositivos touch
+    if(touchSupported) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if(x < rect.width * 0.42){
@@ -236,12 +233,8 @@
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
 
-    // se foi mais vertical que horizontal, considerar scroll e ignorar
     if(Math.abs(dy) > Math.abs(dx)) return;
-
-    // mínimo para considerar swipe
     if(Math.abs(dx) < 50) {
-      // se foi um toque curto (não swipe), tratamos como "toggle UI / zoom"
       toggleUIFromTouch();
       return;
     }
@@ -267,9 +260,7 @@
       postToggleUI(false);
     }
   }
-
   function toggleUIFromTouch(){
-    // on touch "tap" we toggle UI and don't trigger zoom (more natural)
     toggleUI();
   }
 
@@ -339,22 +330,37 @@
     }, 160);
   });
 
-  // Fullscreen handling
+  // Fullscreen handling: supports API when available; otherwise fake fullscreen (best effort for iOS)
   function isIOS(){
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   }
 
   fsBtn.addEventListener('click', async ()=>{
-    if(!isIOS() && document.fullscreenEnabled){
+    if(supportsFullscreenAPI){
       try {
         if(!document.fullscreenElement) await viewerRoot.requestFullscreen();
         else await document.exitFullscreen();
+        return;
       } catch(e){
         console.warn('Fullscreen API falhou', e);
       }
+    }
+
+    // Fake fullscreen fallback
+    const entering = !viewerRoot.classList.contains('fake-fullscreen');
+    if(entering){
+      viewerRoot.classList.add('fake-fullscreen');
+      if(isIOS()) viewerRoot.classList.add('ios-fullscreen');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      postToggleUI(true); // hide parent header as well
+      setTimeout(()=> queueRender(pageNum), 200);
     } else {
-      viewerRoot.classList.toggle('fake-fullscreen');
-      setTimeout(()=> queueRender(pageNum), 220);
+      viewerRoot.classList.remove('fake-fullscreen','ios-fullscreen');
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      postToggleUI(false);
+      setTimeout(()=> queueRender(pageNum), 120);
     }
   });
 
@@ -362,17 +368,17 @@
     setTimeout(()=> queueRender(pageNum), 120);
   });
 
-  // auto-hide UI on inactivity (hide progressWrap and fsBtn) AND notify parent
+  // auto-hide UI on inactivity and notify parent
   let hideUITimer = null;
   function scheduleHideUI(){
     progressWrap.classList.remove('hidden-ui');
     fsBtn.classList.remove('hidden-ui');
-    postToggleUI(false); // informar parent que UI está visível
+    postToggleUI(false);
     clearTimeout(hideUITimer);
     hideUITimer = setTimeout(()=> {
       progressWrap.classList.add('hidden-ui');
       fsBtn.classList.add('hidden-ui');
-      postToggleUI(true); // informar parent que UI foi escondido
+      postToggleUI(true);
     }, 3000);
   }
   ['mousemove','touchstart','wheel','touchmove'].forEach(ev=>{
@@ -380,7 +386,7 @@
   });
   scheduleHideUI();
 
-  // expose basic goToPage for potential external calls
+  // expose basic goToPage
   window.goToPage = function(n){
     if(!pdf) return;
     n = Math.max(1, Math.min(totalPages, Math.floor(n)));
