@@ -1,150 +1,290 @@
-/* =========================================================
-   styles.css — Biblioteca PDF (revisado)
-   - PDF centralizado na página de leitura
-   - Capas com tamanho definido na index (wrapper imagem + título)
-   - Minimalista, acessível, mobile-first
-========================================================= */
-
-/* VARIÁVEIS */
-:root{
-  --bg: #f6f7f9;
+/* =====================================================
+   VARIÁVEIS / TEMA
+===================================================== */
+:root {
+  --bg: #f5f7fb;
   --panel: #ffffff;
-  --text: #0b1220;
-  --muted: #6b7280;
+  --text: #0f172a;
+  --muted: #64748b;
   --accent: #2563eb;
 
-  --dark-bg: #071026;
+  --dark-bg: #050b1c;
   --dark-panel: #0b1220;
 
-  --radius: 12px;
-  --card-gap: 0.6rem;
+  --radius: 14px;
 }
 
-/* RESET / BASE */
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-button{font-family:inherit}
+/* =====================================================
+   RESET / BASE
+===================================================== */
+* {
+  box-sizing: border-box;
+}
 
-/* TOPBAR */
-.topbar{
-  position:sticky;top:0;z-index:60;
-  padding:env(safe-area-inset-top) .75rem .6rem;
-  display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* =====================================================
+   HEADER / TOPBAR
+===================================================== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: env(safe-area-inset-top) 1rem 0.75rem;
+  background: rgba(255,255,255,0.75);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0,0,0,.04);
-}
-.title{font-size:1.05rem;font-weight:600;margin:0}
-.search{min-width:160px;max-width:420px}
-
-/* GRID / CARDS (INDEX) */
-#booksGrid{display:flex;flex-wrap:wrap;gap:.5rem;padding:.25rem}
-#booksGrid > *{flex:0 0 50%;max-width:50%;padding:.3rem}
-
-/* Card structure: wrapper with image + title inside */
-.book-card{
-  display:flex;flex-direction:column;gap:.5rem;
-  background:var(--panel);border-radius:12px;padding:.6rem;
-  height:100%;box-shadow:0 6px 18px rgba(9,10,14,.06);
-  transition:transform .18s ease,box-shadow .18s ease;
-}
-.book-card:hover{transform:translateY(-6px);box-shadow:0 14px 32px rgba(9,10,14,.1)}
-
-/* Thumb wrapper: ensures fixed size & aspect ratio (2:3) */
-.book-thumb{
-  width:100%;
-  aspect-ratio:2/3;
-  border-radius:10px;
-  overflow:hidden;
-  background:linear-gradient(180deg,#e9eef8,#f3f7fc);
-  display:flex;align-items:center;justify-content:center;
-}
-.book-thumb img{
-  width:100%;height:100%;object-fit:cover;display:block;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* Title and author in the same wrapper below image */
-.book-info{display:flex;flex-direction:column;gap:.25rem;padding-top:.2rem}
-.book-title{font-size:.95rem;font-weight:600;line-height:1.2;margin:0}
-.book-author{font-size:.78rem;color:var(--muted);margin:0}
-
-/* Card actions (button) */
-.card-actions{margin-top:auto;display:flex;gap:.5rem}
-.card-actions .btn{flex:1}
-
-/* RESPONSIVE GRID */
-@media (min-width:576px){
-  #booksGrid > *{flex:0 0 33.333%;max-width:33.333%}
-}
-@media (min-width:992px){
-  #booksGrid > *{flex:0 0 20%;max-width:20%}
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
-/* READER - NAV */
-.reader-nav{
-  position:sticky;top:0;z-index:70;padding:.6rem;display:flex;align-items:center;gap:.6rem;
-  background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65));
-  backdrop-filter: blur(8px);border-bottom:1px solid rgba(0,0,0,.05);
+/* =====================================================
+   GRID DE LIVROS (INDEX)
+===================================================== */
+#booksGrid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.75rem;
 }
-.reader-title{font-size:.95rem;font-weight:600}
-.reader-meta .small{font-size:.75rem;color:var(--muted)}
 
-/* PDF VIEWER - CENTRALIZAÇÃO */
-.pdf-viewer{
-  width:100%;
-  min-height: calc(100vh - 64px);
+/* Wrapper do card */
+#booksGrid > div {
+  padding: 0.5rem;
+}
+
+/* Card */
+.book-card {
+  height: 100%;
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.06);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.book-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+}
+
+/* =====================================================
+   CAPA — TAMANHO FIXO E PADRÃO
+===================================================== */
+.book-cover {
+  width: 100%;
+  aspect-ratio: 2 / 3;           /* <<< PADRÃO ABSOLUTO */
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e5e9f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;             /* <<< NUNCA ESTOURA */
+}
+
+/* =====================================================
+   TÍTULO / AUTOR
+===================================================== */
+.book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.book-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.book-author {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* =====================================================
+   BOTÕES DO CARD
+===================================================== */
+.card-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.card-actions button,
+.card-actions a {
+  flex: 1;
+  font-size: 0.85rem;
+  border-radius: 8px;
+}
+
+/* =====================================================
+   READER (LEITURA PDF)
+===================================================== */
+.reader-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.reader-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* =====================================================
+   VIEWER — CENTRALIZAÇÃO REAL
+===================================================== */
+.pdf-viewer {
+  width: 100%;
+  min-height: calc(100vh - 56px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;           /* <<< CENTRALIZA */
   padding: 16px 12px 32px;
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  display:flex;flex-direction:column;align-items:center; /* centraliza */
-  background:transparent;
 }
 
-/* wrapper: contém o canvas e mantém centralização */
-.page-wrapper{
-  width:100%;
-  display:flex;
-  justify-content:center; /* centraliza o canvas horizontalmente */
-  margin-bottom:20px;
-  padding: 6px 0;
+/* Wrapper de página */
+.page-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
-/* canvas da página */
-.pdf-page{
-  width:auto;
-  max-width:100%;
-  height:auto;
-  border-radius:12px;
-  background:var(--panel);
-  box-shadow:0 10px 28px rgba(6,10,20,.12);
-  display:block;
+/* Canvas do PDF */
+.pdf-page {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 16px 0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.12);
 }
 
-/* Desktop: limita largura para leitura confortável */
-@media (min-width:992px){
-  .pdf-page{max-width:860px}
+/* Limite confortável no desktop */
+@media (min-width: 992px) {
+  .pdf-page {
+    max-width: 860px;
+  }
 }
 
-/* SIMULATED FULLSCREEN (iOS) */
-.sim-full{height:100dvh;overflow:hidden}
-.sim-full .pdf-viewer{position:fixed;inset:0;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);background:var(--panel);z-index:9998}
-.sim-full .reader-nav{display:none}
+/* =====================================================
+   FULLSCREEN SIMULADO (iOS)
+===================================================== */
+.sim-full {
+  height: 100dvh;
+  overflow: hidden;
+}
 
-/* DARK MODE */
-.dark{background:var(--dark-bg);color:#e6eef8}
-.dark .topbar,.dark .reader-nav{background:linear-gradient(180deg, rgba(7,16,34,.95), rgba(7,16,34,.85));border-bottom-color:rgba(255,255,255,.06)}
-.dark .book-card{background:var(--dark-panel);box-shadow:0 12px 30px rgba(0,0,0,.5)}
-.dark .book-author{color:#9fb0c9}
+.sim-full .reader-nav {
+  display: none;
+}
 
-/* inverter PDF para dark (nota: afeta imagens) */
-.dark .pdf-page{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(1.05)}
+.sim-full .pdf-viewer {
+  position: fixed;
+  inset: 0;
+  padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+  background: var(--panel);
+  z-index: 9999;
+}
 
-/* Acessibilidade */
-button:focus,a:focus,input:focus{outline:3px solid rgba(37,99,235,.12);outline-offset:2px}
+/* =====================================================
+   DARK MODE
+===================================================== */
+.dark {
+  background: var(--dark-bg);
+  color: #e5ecf6;
+}
 
-/* outros ajustes mobile */
-@media (max-width:575px){
-  .title{font-size:1rem}
-  .book-title{font-size:.9rem}
-  .book-author{font-size:.72rem}
+.dark .topbar,
+.dark .reader-nav {
+  background: rgba(7,16,34,0.92);
+  border-bottom-color: rgba(255,255,255,0.05);
+}
+
+.dark .book-card {
+  background: var(--dark-panel);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.6);
+}
+
+.dark .book-author {
+  color: #9fb2d0;
+}
+
+.dark .pdf-page {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95);
+}
+
+/* =====================================================
+   RESPONSIVIDADE GRID
+===================================================== */
+@media (max-width: 575px) {
+  #booksGrid > div {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  #booksGrid > div {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+  }
+}
+
+@media (min-width: 992px) {
+  #booksGrid > div {
+    flex: 0 0 20%;
+    max-width: 20%;
+  }
+}
+
+/* =====================================================
+   ACESSIBILIDADE
+===================================================== */
+button:focus,
+a:focus,
+input:focus {
+  outline: 3px solid rgba(37,99,235,0.25);
+  outline-offset: 2px;
 }
