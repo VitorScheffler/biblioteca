@@ -198,3 +198,30 @@ button:focus {
     font-size: .82rem;
   }
 }
+
+/* ===== CAPAS DOS LIVROS ===== */
+
+.book-card img {
+  width: 100%;
+  aspect-ratio: 2 / 3;      /* proporção padrão de livro */
+  height: auto;
+  max-height: 260px;        /* mobile */
+  object-fit: cover;        /* corta sem distorcer */
+  object-position: center;  /* centraliza o corte */
+  border-radius: 10px;
+  background: #e5e7eb;      /* fallback enquanto carrega */
+}
+
+/* Tablets */
+@media (min-width: 576px) {
+  .book-card img {
+    max-height: 320px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 992px) {
+  .book-card img {
+    max-height: 380px;
+  }
+}
