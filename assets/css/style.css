@@ -128,3 +128,33 @@ button:focus, a:focus, input:focus {outline:3px solid rgba(37,99,235,0.12);outli
 
 /* card layout wrapper for grid items */
 #booksGrid > * {display:block;padding:.3rem}
+
+/* Container do viewer */
+.pdf-viewer {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;        /* <<< CENTRALIZA HORIZONTAL */
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* Wrapper de cada página */
+.page-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;    /* <<< CENTRALIZA O CANVAS */
+  margin-bottom: 18px;
+}
+
+/* Canvas do PDF */
+.pdf-page {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.15);
+  background: white;
+}
