@@ -1,398 +1,214 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
-  <title>Leitor — PDF</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Leitor — PDF</title>
 
-  <!-- PDF.js via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
+</script>
 
-  <style>
-    :root{
-      --bg: #0b0d0f;
-      --text: #e6eef8;
-      --accent: #2b82ff;
-    }
-    html,body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; -webkit-tap-highlight-color: transparent; }
-    .viewer-root { height:100dvh; height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; background:var(--bg); }
-    .canvas-area { max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center; overflow:auto; padding:20px; box-sizing:border-box; width:100%; height:100%; -webkit-overflow-scrolling: touch; }
-    canvas.pdf-canvas { background:white; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); max-width:100%; height:auto; display:block; touch-action:pan-y pinch-zoom; }
+<style>
+:root{
+  --bg:#0b0d0f;
+  --text:#e6eef8;
+  --accent:#2b82ff;
+}
 
-    .progress-bar-wrap {
-      position:fixed;
-      left:50%;
-      transform:translateX(-50%);
-      bottom:18px;
-      width:min(720px, calc(100% - 40px));
-      background: rgba(255,255,255,0.03);
-      border-radius:12px;
-      padding:8px 10px;
-      display:flex;
-      gap:12px;
-      align-items:center;
-      box-shadow:0 6px 18px rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      z-index:60;
-      transition:opacity 220ms;
-    }
-    .progress-track { position:relative; height:6px; background: rgba(255,255,255,0.04); border-radius:999px; flex:1; overflow:hidden; cursor:pointer; }
-    .progress-fill { position:absolute; left:0; top:0; bottom:0; width:0%; background: linear-gradient(90deg, var(--accent), #66a6ff); border-radius:999px; transition: width 220ms ease; }
-    .progress-label { min-width:140px; text-align:right; font-size:13px; color:var(--text); opacity:0.95; }
+html,body{
+  margin:0;
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+}
 
-    .center-msg { position:absolute; top:12px; left:12px; font-size:13px; color:rgba(230,238,248,0.95); background: rgba(0,0,0,0.2); padding:6px 8px; border-radius:8px; z-index:70; backdrop-filter: blur(3px); }
+.viewer-root{
+  height:100dvh;
+  width:100vw;
+  position:relative;
+  overflow:hidden;
+}
 
-    #fullscreenBtn{ position:fixed; top:14px; right:14px; z-index:80; background:rgba(255,255,255,0.06); border:none; color:#fff; font-size:18px; padding:8px 12px; border-radius:10px; cursor:pointer; backdrop-filter: blur(4px); }
-    .fake-fullscreen{ position:fixed !important; inset:0 !important; width:100vw !important; height:100dvh !important; display:flex; align-items:center; justify-content:center; background:var(--bg); z-index:999999 !important; }
-    .ios-fullscreen { padding-bottom: env(safe-area-inset-bottom); padding-top: env(safe-area-inset-top); }
+.canvas-area{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
 
-    .hidden-ui { opacity:0; pointer-events:none; }
+canvas{
+  background:#fff;
+  display:block;
+  max-width:100%;
+  height:auto;
+  border-radius:6px;
+}
 
-    @media (max-width:520px){
-      .progress-bar-wrap { bottom:12px; padding:6px 8px; width:calc(100% - 28px); }
-      .progress-label { min-width:100px; font-size:12px; }
-      #fullscreenBtn { top:10px; right:10px; padding:7px 9px; font-size:16px; }
-    }
-  </style>
+.progress{
+  position:fixed;
+  bottom:14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:calc(100% - 32px);
+  max-width:720px;
+  background:rgba(255,255,255,.06);
+  padding:8px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.track{
+  flex:1;
+  height:6px;
+  background:rgba(255,255,255,.1);
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent),#66a6ff);
+}
+
+.label{
+  font-size:12px;
+  white-space:nowrap;
+}
+
+.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+</style>
 </head>
+
 <body>
-  <div class="viewer-root" id="viewerRoot">
-    <div class="canvas-area" id="canvasArea">
-      <canvas id="pdfCanvas" class="pdf-canvas" role="img" aria-label="Página do PDF"></canvas>
-    </div>
-
-    <div id="centerMsg" class="center-msg" style="display:none">Mensagem</div>
-
-    <button id="fullscreenBtn" aria-label="Tela cheia">⤢</button>
-
-    <div class="progress-bar-wrap" id="progressWrap" title="Clique para pular para uma posição">
-      <div class="progress-track" id="progressTrack" aria-hidden="true">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
-      <div class="progress-label" id="progressLabel">Página 0 / 0 — 0%</div>
-    </div>
+<div class="viewer-root" id="viewerRoot">
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="pdfCanvas"></canvas>
   </div>
 
+  <div class="progress" id="progress">
+    <div class="track" id="track"><div class="fill" id="fill"></div></div>
+    <div class="label" id="label">0 / 0</div>
+  </div>
+</div>
+
 <script>
-(async function(){
+(async ()=>{
   const params = new URLSearchParams(location.search);
-  const file = params.get('file') || '';
-  const titleParam = params.get('title') || '';
+  const file = params.get('file');
+  if(!file) return alert('Arquivo não informado');
 
-  const viewerRoot = document.getElementById('viewerRoot');
-  const canvasArea = document.getElementById('canvasArea');
   const canvas = document.getElementById('pdfCanvas');
-  const ctx = canvas.getContext('2d', { alpha:false });
-  const centerMsg = document.getElementById('centerMsg');
-  const progressFill = document.getElementById('progressFill');
-  const progressLabel = document.getElementById('progressLabel');
-  const progressTrack = document.getElementById('progressTrack');
-  const progressWrap = document.getElementById('progressWrap');
-  const fsBtn = document.getElementById('fullscreenBtn');
+  const ctx = canvas.getContext('2d');
+  const area = document.getElementById('canvasArea');
+  const fill = document.getElementById('fill');
+  const label = document.getElementById('label');
+  const progress = document.getElementById('progress');
 
-  if(!file){
-    showMsg('Arquivo não informado — use ?file=/books/seuarquivo.pdf', 0);
-    return;
-  }
-
-  let pdf = null;
-  let pageNum = 1;
-  let totalPages = 0;
-  let rotation = 0;
-  let scale = 1;
+  let pdf, pageNum = 1, total = 0;
   let rendering = false;
-  let queuedPage = null;
+  let queued = null;
   let zoomManual = false;
-  const storageKey = 'pdf-progress-' + file;
+  let scale = 1;
 
-  const touchSupported = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const supportsFullscreenAPI = !!(Element.prototype.requestFullscreen && document.fullscreenEnabled);
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-  const saved = parseInt(localStorage.getItem(storageKey));
-  if(!isNaN(saved) && saved >= 1) pageNum = saved;
+  pdf = await pdfjsLib.getDocument(file).promise;
+  total = pdf.numPages;
+  render(pageNum);
 
-  function showMsg(txt, timeout=3000){
-    centerMsg.textContent = txt;
-    centerMsg.style.display = 'block';
-    if(timeout > 0){
-      clearTimeout(showMsg._t);
-      showMsg._t = setTimeout(()=> centerMsg.style.display = 'none', timeout);
-    }
-  }
-
-  function postToggleUI(hidden){
-    try {
-      parent.postMessage({ type: 'toggle_ui', hidden }, '*');
-      parent.postMessage({ type: hidden ? 'ui_hidden' : 'ui_shown' }, '*');
-    } catch(e){}
-  }
-
-  // load PDF
-  showMsg('Carregando...');
-  try{
-    const loadingTask = pdfjsLib.getDocument({ url: file, withCredentials:false });
-    pdf = await loadingTask.promise;
-    totalPages = pdf.numPages;
-    if(pageNum > totalPages) pageNum = 1;
-    updateProgressUI();
-    queueRender(pageNum);
-    showMsg('Pronto', 700);
-  } catch(err){
-    console.error(err);
-    showMsg('Erro ao carregar PDF — verifique o caminho e o servidor', 8000);
-    return;
-  }
-
-  async function renderPage(n){
+  async function render(n){
     rendering = true;
-    try {
-      const page = await pdf.getPage(n);
-      const vp1 = page.getViewport({ scale:1, rotation });
-      const containerW = Math.max(80, canvasArea.clientWidth - 40);
-      const containerH = Math.max(80, canvasArea.clientHeight - 40);
-      if(!zoomManual){
-        const scaleX = containerW / vp1.width;
-        const scaleY = containerH / vp1.height;
-        scale = Math.min(scaleX, scaleY, 2.5);
-        scale = Math.max(scale, 0.35);
-      }
-      const outputScale = window.devicePixelRatio || 1;
-      const viewport = page.getViewport({ scale: scale * outputScale, rotation });
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      canvas.style.width = Math.floor(viewport.width / outputScale) + 'px';
-      canvas.style.height = Math.floor(viewport.height / outputScale) + 'px';
+    const page = await pdf.getPage(n);
 
-      ctx.save();
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0,0,canvas.width, canvas.height);
-      ctx.restore();
+    const base = page.getViewport({ scale:1 });
+    const areaW = area.clientWidth;
+    const areaH = area.clientHeight;
 
-      const renderContext = { canvasContext: ctx, viewport: page.getViewport({ scale: scale * outputScale, rotation }) };
-      const renderTask = page.render(renderContext);
-      await renderTask.promise;
-
-      rendering = false;
-      localStorage.setItem(storageKey, n);
-      updateProgressUI();
-      if(queuedPage && queuedPage !== n){
-        const next = queuedPage; queuedPage = null;
-        queueRender(next);
-      }
-    } catch(err){
-      console.error('Render error', err);
-      rendering = false;
-      showMsg('Erro ao renderizar página', 3000);
-    }
-  }
-
-  function queueRender(n){
-    if(rendering){
-      queuedPage = n;
-    } else {
-      pageNum = n;
-      renderPage(n);
-    }
-  }
-
-  function updateProgressUI(){
-    const pct = totalPages ? Math.round((pageNum/totalPages)*100) : 0;
-    progressFill.style.width = pct + '%';
-    progressLabel.textContent = `Página ${pageNum} / ${totalPages} — ${pct}%`;
-  }
-
-  // Click navigation: disabled on touch devices (prevents double-trigger)
-  canvas.addEventListener('click', (e)=>{
-    if(touchSupported) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if(x < rect.width * 0.42){
-      if(pageNum > 1) queueRender(pageNum - 1);
-    } else if(x > rect.width * 0.58){
-      if(pageNum < totalPages) queueRender(pageNum + 1);
-    } else {
-      toggleZoom();
-    }
-  });
-
-  // Touch swipe (robusto) - apenas uma ação por gesto
-  let touchStartX = 0;
-  let touchStartY = 0;
-  canvas.addEventListener('touchstart', (e)=> {
-    if(!e.touches || !e.touches[0]) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }, { passive:true });
-
-  canvas.addEventListener('touchend', (e)=> {
-    if(!e.changedTouches || !e.changedTouches[0]) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-
-    if(Math.abs(dy) > Math.abs(dx)) return;
-    if(Math.abs(dx) < 50) {
-      toggleUIFromTouch();
-      return;
-    }
-
-    if(dx < 0 && pageNum < totalPages){
-      queueRender(pageNum + 1);
-    } else if(dx > 0 && pageNum > 1){
-      queueRender(pageNum - 1);
-    }
-  }, { passive:true });
-
-  // toggle UI (progress + fullscreen button) — e informar o parent para esconder header
-  let uiHidden = false;
-  function toggleUI(){
-    uiHidden = !uiHidden;
-    if(uiHidden){
-      progressWrap.classList.add('hidden-ui');
-      fsBtn.classList.add('hidden-ui');
-      postToggleUI(true);
-    } else {
-      progressWrap.classList.remove('hidden-ui');
-      fsBtn.classList.remove('hidden-ui');
-      postToggleUI(false);
-    }
-  }
-  function toggleUIFromTouch(){
-    toggleUI();
-  }
-
-  // progress bar click to jump
-  progressTrack.addEventListener('click', (e)=>{
-    const r = progressTrack.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const pct = Math.max(0, Math.min(1, x / r.width));
-    const targetPage = Math.max(1, Math.min(totalPages, Math.round(pct * totalPages)));
-    queueRender(targetPage);
-  });
-
-  // keyboard nav
-  window.addEventListener('keydown', (e)=>{
-    if(e.key === 'ArrowRight'){ if(pageNum < totalPages) queueRender(pageNum + 1); }
-    if(e.key === 'ArrowLeft'){ if(pageNum > 1) queueRender(pageNum - 1); }
-    if(e.key === 'Home'){ queueRender(1); }
-    if(e.key === 'End'){ queueRender(totalPages); }
-    if(e.key === '+' || e.key === '='){ manualZoom(scale * 1.15); }
-    if(e.key === '-') { manualZoom(scale / 1.15); }
-  });
-
-  function toggleZoom(){
-    if(!pdf) return;
-    if(zoomManual){
-      zoomManual = false;
-      queueRender(pageNum);
-    } else {
-      zoomManual = true;
-      manualZoom(1.0);
-    }
-  }
-
-  function manualZoom(val){
-    zoomManual = true;
-    scale = Math.max(0.25, Math.min(4, val));
-    (async ()=>{
-      if(!pdf) return;
-      rendering = true;
-      try {
-        const page = await pdf.getPage(pageNum);
-        const outputScale = window.devicePixelRatio || 1;
-        const viewport = page.getViewport({ scale: scale * outputScale, rotation });
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        canvas.style.width = Math.floor(viewport.width / outputScale) + 'px';
-        canvas.style.height = Math.floor(viewport.height / outputScale) + 'px';
-        ctx.save(); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width, canvas.height); ctx.restore();
-        await page.render({ canvasContext: ctx, viewport: page.getViewport({ scale: scale * outputScale, rotation }) }).promise;
-        rendering = false;
-        updateProgressUI();
-        localStorage.setItem(storageKey, pageNum);
-        if(queuedPage && queuedPage !== pageNum){ const next = queuedPage; queuedPage = null; queueRender(next); }
-      } catch(err){
-        console.error(err);
-        rendering = false;
-      }
-    })();
-  }
-
-  // resize -> re-render (fit) unless manual zoom
-  let resizeTimer = null;
-  window.addEventListener('resize', ()=>{
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(()=> {
-      queueRender(pageNum);
-    }, 160);
-  });
-
-  // Fullscreen handling: supports API when available; otherwise fake fullscreen (best effort for iOS)
-  function isIOS(){
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  }
-
-  fsBtn.addEventListener('click', async ()=>{
-    if(supportsFullscreenAPI){
-      try {
-        if(!document.fullscreenElement) await viewerRoot.requestFullscreen();
-        else await document.exitFullscreen();
-        return;
-      } catch(e){
-        console.warn('Fullscreen API falhou', e);
+    if(!zoomManual){
+      if(isMobile){
+        // 🔥 MOBILE: sempre ajustar pela largura
+        scale = areaW / base.width;
+        scale = Math.max(scale, 1.1); // nunca pequeno
+      }else{
+        // DESKTOP: caber inteiro
+        scale = Math.min(
+          areaW / base.width,
+          areaH / base.height
+        );
       }
     }
 
-    // Fake fullscreen fallback
-    const entering = !viewerRoot.classList.contains('fake-fullscreen');
-    if(entering){
-      viewerRoot.classList.add('fake-fullscreen');
-      if(isIOS()) viewerRoot.classList.add('ios-fullscreen');
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      postToggleUI(true); // hide parent header as well
-      setTimeout(()=> queueRender(pageNum), 200);
-    } else {
-      viewerRoot.classList.remove('fake-fullscreen','ios-fullscreen');
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      postToggleUI(false);
-      setTimeout(()=> queueRender(pageNum), 120);
+    const dpr = window.devicePixelRatio || 1;
+    const vp = page.getViewport({ scale: scale * dpr });
+
+    canvas.width = vp.width;
+    canvas.height = vp.height;
+    canvas.style.width = vp.width / dpr + 'px';
+    canvas.style.height = vp.height / dpr + 'px';
+
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    await page.render({ canvasContext:ctx, viewport:page.getViewport({ scale }) }).promise;
+
+    fill.style.width = (n/total*100)+'%';
+    label.textContent = `Página ${n} / ${total}`;
+
+    rendering = false;
+    if(queued){
+      const q = queued;
+      queued = null;
+      render(q);
     }
-  });
-
-  document.addEventListener('fullscreenchange', ()=> {
-    setTimeout(()=> queueRender(pageNum), 120);
-  });
-
-  // auto-hide UI on inactivity and notify parent
-  let hideUITimer = null;
-  function scheduleHideUI(){
-    progressWrap.classList.remove('hidden-ui');
-    fsBtn.classList.remove('hidden-ui');
-    postToggleUI(false);
-    clearTimeout(hideUITimer);
-    hideUITimer = setTimeout(()=> {
-      progressWrap.classList.add('hidden-ui');
-      fsBtn.classList.add('hidden-ui');
-      postToggleUI(true);
-    }, 3000);
   }
-  ['mousemove','touchstart','wheel','touchmove'].forEach(ev=>{
-    window.addEventListener(ev, scheduleHideUI, {passive:true});
+
+  function go(n){
+    if(rendering) queued = n;
+    else{
+      pageNum = Math.max(1,Math.min(total,n));
+      render(pageNum);
+    }
+  }
+
+  // swipe — UMA página por gesto
+  let sx = 0, sy = 0;
+  canvas.addEventListener('touchstart', e=>{
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, {passive:true});
+
+  canvas.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if(Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+
+    if(dx < 0) go(pageNum + 1);
+    else go(pageNum - 1);
+  }, {passive:true});
+
+  // tap → esconder menu
+  canvas.addEventListener('click', ()=>{
+    progress.classList.toggle('hidden');
+    try{
+      parent.postMessage(
+        { type:'toggle_ui', hidden:progress.classList.contains('hidden') },
+        '*'
+      );
+    }catch{}
   });
-  scheduleHideUI();
 
-  // expose basic goToPage
-  window.goToPage = function(n){
-    if(!pdf) return;
-    n = Math.max(1, Math.min(totalPages, Math.floor(n)));
-    queueRender(n);
-  };
-
+  window.addEventListener('resize', ()=>render(pageNum));
 })();
 </script>
 </body>
