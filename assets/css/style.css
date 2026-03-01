@@ -1,227 +1,130 @@
-/* assets/css/styles.css - atualizações para fullscreen iOS e modo escuro */
+/* assets/css/styles.css — Minimalista, acessível, mobile-first */
 
+/* Fonte */
 :root{
-  --bg: #f8f9fa;
-  --text: #111827;
-  --reader-bg: #ffffff;
-  --dark-bg: #0b1220;
-  --dark-panel: #061022;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #0b1220;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --dark-bg: #071026;
+  --dark-panel: #0b1220;
+  --radius: 12px;
+  --glass: rgba(255,255,255,0.6);
 }
 
-html,body{
-  height:100%;
-  margin:0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: var(--bg);
-  color: var(--text);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-}
+/* Reset simples */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
 
-/* NAV */
-.reader-nav{
-  position:relative;
-  z-index: 30;
+/* Buttons minimal */
+.btn-ghost{background:transparent;border:0;font-size:1.1rem;padding:.25rem .5rem}
+.btn{border-radius:8px}
+
+/* Topbar / Header */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  padding:env(safe-area-inset-top) .75rem .6rem;
+  background:linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.6));
   backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(10,10,12,0.04);
+  display:flex;align-items:center;justify-content:space-between;
 }
 
-/* PDF viewer */
+.title{font-weight:600;font-size:1.05rem;margin:0}
+
+/* Search */
+.search{min-width:180px;max-width:420px}
+
+/* GRID - cards */
+#booksGrid {padding: .25rem}
+.book-card {
+  height:100%;
+  background:var(--panel);
+  border-radius:var(--radius);
+  padding:.7rem;
+  box-shadow: 0 6px 18px rgba(9,10,14,0.06);
+  display:flex;flex-direction:column;
+  gap:.5rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.book-card:hover{transform:translateY(-6px); box-shadow: 0 12px 30px rgba(9,10,14,0.08)}
+.book-cover{width:100%; aspect-ratio:2/3; border-radius:10px; overflow:hidden; background:#e9eef8;}
+.book-cover img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* Title/author */
+.book-title{font-size:.95rem;font-weight:600;line-height:1.2;margin:0}
+.book-author{font-size:.78rem;color:var(--muted);margin:0}
+
+/* Buttons inside card */
+.card-actions{margin-top:auto;display:flex;gap:.5rem}
+
+/* Footer */
+.footer{border-top:0}
+
+/* READER STYLES */
+.reader-nav{position:sticky;top:0;z-index:70;padding:.6rem;background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6));backdrop-filter: blur(6px);display:flex;align-items:center;gap:.6rem}
+.reader-title{font-weight:600;font-size:.95rem}
+.reader-meta .small{font-size:.75rem;color:var(--muted)}
+
+/* pdf viewer basics */
 .pdf-viewer{
-  box-sizing: border-box;
-  width:100%;
-  /* altura ajustada via JS para evitar barra do iOS */
-  overflow:auto;
-  -webkit-overflow-scrolling: touch;
-  background: var(--reader-bg);
+  width:100%;overflow:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 12px 30px;
+  min-height: calc(100vh - 64px);
+  background:transparent;
 }
 
-/* cada canvas/page */
+/* each canvas page */
 .pdf-page{
-  margin: 12px 0;
+  margin: 14px auto;
   max-width: 100%;
   height: auto;
   display:block;
-  border-radius: 6px;
-  box-shadow: 0 3px 12px rgba(15,23,42,0.06);
+  border-radius:10px;
+  box-shadow: 0 6px 20px rgba(6,10,20,0.06);
 }
 
-/* SIMULATED FULLSCREEN */
-/* quando ativado, deixamos o viewer ocupando a tela toda e escondemos a UI */
+/* simulated fullscreen (iOS friendly) */
 .sim-full {
-  background: var(--reader-bg);
-  height: 100dvh; /* usa dynamic viewport */
+  height: 100dvh !important;
   overflow: hidden;
+  background: var(--panel);
 }
-
 .sim-full .pdf-viewer{
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100dvh;
-  z-index: 9998;
-  padding: env(safe-area-inset-top) 10px env(safe-area-inset-bottom);
-  background: var(--reader-bg);
+  position:fixed; inset:0; padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+  background: var(--panel); z-index:9998;
 }
+.sim-full .reader-nav{display:none}
 
-/* escondemos a nav para leitura limpa; se preferir mostrar parte, remova esta regra */
-.sim-full .reader-nav,
-.hidden-in-simfull {
-  display: none !important;
-}
-
-/* DARK MODE */
-/* adiciona cores escuras e aplica filtro aos canvas para inverter texto */
+/* DARK MODE - index + reader */
 .dark {
-  background: var(--dark-bg);
-  color: #e6eef8;
+  background: var(--dark-bg) !important;
+  color: #e6eef8 !important;
+}
+.dark .topbar, .dark .reader-nav{
+  background: linear-gradient(180deg, rgba(7,16,34,0.9), rgba(7,16,34,0.85));
+  border-bottom-color: rgba(255,255,255,0.04);
+}
+.dark .book-card{background:var(--dark-panel); box-shadow: 0 10px 26px rgba(0,0,0,0.5)}
+.dark .book-author{color:#9fb0c9}
+.dark .pdf-page{filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.02)}
+
+/* Accessibility focus */
+button:focus, a:focus, input:focus {outline:3px solid rgba(37,99,235,0.12);outline-offset:2px}
+
+/* responsive grid columns */
+@media (max-width:575px){
+  #booksGrid > * {flex: 0 0 50%; max-width:50%} /* 2 cols mobile */
+  .reader-title{font-size:.92rem}
+}
+@media (min-width:576px) and (max-width:991px){
+  #booksGrid > * {flex: 0 0 33.333%; max-width:33.333%} /* 3 cols tablet */
+}
+@media (min-width:992px){
+  #booksGrid > * {flex: 0 0 20%; max-width:20%} /* 5 cols desktop */
 }
 
-.dark .pdf-viewer{
-  background: var(--dark-panel);
-}
-
-/* Ajusta o canvas (inverte cores para criar modo escuro).
-   Atenção: isso também afetará imagens dentro do PDF. */
-.dark .pdf-page{
-  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.02);
-}
-
-/* Botões: melhor foco para acessibilidade */
-button:focus {
-  outline: 3px solid rgba(13,110,253,0.18);
-  outline-offset: 2px;
-  box-shadow: none;
-}
-
-/* pequenas responsividades */
-@media (min-width: 768px){
-  .pdf-page { margin: 18px auto; }
-}
-
-/* fallback para navegadores antigos: usa 100vh */
-@supports(not (height: 100dvh)) {
-  .sim-full .pdf-viewer {
-    height: 100vh;
-  }
-}
-
-/* ======================
-   INDEX / HOME
-====================== */
-
-.index-body {
-  min-height: 100dvh;
-  background: #f8f9fa;
-  color: #111827;
-}
-
-/* Top bar */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  padding: env(safe-area-inset-top) 16px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(248,249,250,0.85);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-.title {
-  font-size: 1.2rem;
-  margin: 0;
-}
-
-/* Cards */
-.book-card {
-  height: 100%;
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 10px;
-  box-shadow: 0 6px 18px rgba(15,23,42,.08);
-  display: flex;
-  flex-direction: column;
-}
-
-.book-card img {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border-radius: 10px;
-  margin-bottom: 8px;
-}
-
-.book-card h2 {
-  font-size: .9rem;
-  font-weight: 600;
-  margin: 4px 0;
-  line-height: 1.2;
-}
-
-.book-card p {
-  font-size: .75rem;
-  opacity: .75;
-  margin-bottom: auto;
-}
-
-/* ======================
-   DARK MODE (INDEX)
-====================== */
-
-.dark.index-body {
-  background: #0b1220;
-  color: #e6eef8;
-}
-
-.dark .topbar {
-  background: rgba(6,16,34,0.85);
-  border-bottom-color: rgba(255,255,255,.08);
-}
-
-.dark .book-card {
-  background: #061022;
-  box-shadow: 0 8px 22px rgba(0,0,0,.4);
-}
-
-.dark .book-card p {
-  opacity: .9;
-}
-
-/* ======================
-   MOBILE FIXES
-====================== */
-
-@media (max-width: 576px) {
-  .book-card h2 {
-    font-size: .82rem;
-  }
-}
-
-/* ===== CAPAS DOS LIVROS ===== */
-
-.book-card img {
-  width: 100%;
-  aspect-ratio: 2 / 3;      /* proporção padrão de livro */
-  height: auto;
-  max-height: 260px;        /* mobile */
-  object-fit: cover;        /* corta sem distorcer */
-  object-position: center;  /* centraliza o corte */
-  border-radius: 10px;
-  background: #e5e7eb;      /* fallback enquanto carrega */
-}
-
-/* Tablets */
-@media (min-width: 576px) {
-  .book-card img {
-    max-height: 320px;
-  }
-}
-
-/* Desktop */
-@media (min-width: 992px) {
-  .book-card img {
-    max-height: 380px;
-  }
-}
+/* card layout wrapper for grid items */
+#booksGrid > * {display:block;padding:.3rem}

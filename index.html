@@ -1,37 +1,45 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Biblioteca</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Biblioteca — PDFs</title>
 
-  <!-- Bootstrap -->
+  <!-- Fonte minimalista -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap (utilities only) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- CSS -->
+  <!-- Estilos principais -->
   <link rel="stylesheet" href="/assets/css/styles.css">
-
-  <!-- iOS PWA hints -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-
 <body class="index-body">
 
 <header class="topbar">
-  <h1 class="title">📚 Biblioteca</h1>
+  <div class="container-fluid d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <button id="menuBtn" class="btn btn-ghost" aria-label="Menu">☰</button>
+      <h1 class="title mb-0">Biblioteca</h1>
+    </div>
 
-  <button id="toggleDarkIndex"
-          class="btn btn-sm btn-outline-secondary"
-          aria-label="Alternar modo escuro">
-    🌙
-  </button>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <input id="searchInput" class="form-control form-control-sm search" type="search" placeholder="Buscar título ou autor" aria-label="Buscar livros">
+      <button id="toggleDarkIndex" class="btn btn-outline-secondary btn-sm" aria-pressed="false" aria-label="Alternar modo escuro">🌙</button>
+    </div>
+  </div>
 </header>
 
 <main class="container-fluid py-3">
-  <div id="booksGrid" class="row g-3"></div>
+  <section id="booksGrid" class="row g-3" aria-live="polite"></section>
+
+  <div id="noResults" class="text-center text-muted mt-4 d-none">Nenhum livro encontrado.</div>
 </main>
 
-<script src="/assets/js/index.js"></script>
+<footer class="footer text-center py-3 small text-muted">
+  Feito com ♥ — Apenas PDFs — Estático (Vercel)
+</footer>
+
+<script src="/assets/js/app.js"></script>
 </body>
 </html>

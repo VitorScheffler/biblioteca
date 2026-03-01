@@ -1,150 +1,197 @@
 // assets/js/reader.js
-// Leitor PDF com: simulated-fullscreen (iOS friendly) + dark mode + zoom + altura correta em iOS
+// Leitor PDF com PDF.js, zoom, next/prev, simulated fullscreen (iOS), dark mode.
+// Lazy-render por página usando IntersectionObserver (renderiza páginas visíveis).
 
+// Elementos
 const params = new URLSearchParams(window.location.search);
 const file = params.get("file");
 const container = document.getElementById("pdfViewer");
+const titleDisplay = document.getElementById("titleDisplay");
+const pageIndicator = document.getElementById("pageIndicator");
 const zoomInBtn = document.getElementById("zoomIn");
 const zoomOutBtn = document.getElementById("zoomOut");
-const toggleFullBtn = document.getElementById("toggleFull");
 const toggleDarkBtn = document.getElementById("toggleDark");
-const nav = document.querySelector(".reader-nav");
+const toggleFullBtn = document.getElementById("toggleFull");
+const prevBtn = document.getElementById("prevPage");
+const nextBtn = document.getElementById("nextPage");
 
 if (!file) {
-  container.innerHTML = "<p class='text-center p-3'>PDF não informado</p>";
+  container.innerHTML = "<p class='p-3 text-center text-danger'>PDF não informado</p>";
   throw new Error("PDF não informado");
 }
 
 // PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-let scale = window.innerWidth < 768 ? 1.05 : 1.3;
 let pdfDoc = null;
-let isSimFull = localStorage.getItem("reader-sim-full") === "true";
+let scale = parseFloat(localStorage.getItem("reader-scale")) || (window.innerWidth < 768 ? 1.05 : 1.3);
+let currentPage = parseInt(localStorage.getItem("reader-page")) || 1;
+let renderedPages = new Set();
 let darkMode = localStorage.getItem("reader-dark") === "true";
+let isSimFull = localStorage.getItem("reader-sim-full") === "true";
 
-// Ajusta a altura do viewer para evitar o "endereço bar" do iOS
-function setViewerHeight() {
-  // usa innerHeight, que muda conforme a barra do Safari aparece/some
-  const h = window.innerHeight;
-  container.style.height = h + "px";
-  // opcional: empurra o conteúdo pra baixo da safe-area
-  container.style.paddingTop = "env(safe-area-inset-top)";
+// helper: set viewer height to avoid iOS address bar issues
+function setViewerHeight(){
+  container.style.height = window.innerHeight + "px";
 }
 window.addEventListener("resize", setViewerHeight);
-window.addEventListener("orientationchange", () => {
-  // dá um pequeno delay para o mobile recalcular a altura
-  setTimeout(setViewerHeight, 300);
-});
+window.addEventListener("orientationchange", () => setTimeout(setViewerHeight, 300));
 setViewerHeight();
 
-// Aplica o modo escuro (classe no body)
-function applyDarkMode() {
-  if (darkMode) {
-    document.body.classList.add("dark");
-    toggleDarkBtn.setAttribute("aria-pressed", "true");
-  } else {
-    document.body.classList.remove("dark");
-    toggleDarkBtn.setAttribute("aria-pressed", "false");
-  }
+// apply dark mode
+function applyDark() {
+  document.body.classList.toggle("dark", darkMode);
+  toggleDarkBtn?.setAttribute("aria-pressed", darkMode ? "true" : "false");
 }
-applyDarkMode();
+applyDark();
 
-// Aplica a simulação de tela cheia (classe no body)
+// apply simulated fullscreen
 function applySimFull() {
-  if (isSimFull) {
-    document.body.classList.add("sim-full");
-    toggleFullBtn.setAttribute("aria-pressed", "true");
-    // esconder nav se quiser leitura limpa
-    nav.classList.add("hidden-in-simfull");
-  } else {
-    document.body.classList.remove("sim-full");
-    toggleFullBtn.setAttribute("aria-pressed", "false");
-    nav.classList.remove("hidden-in-simfull");
-  }
+  document.body.classList.toggle("sim-full", isSimFull);
+  toggleFullBtn?.setAttribute("aria-pressed", isSimFull ? "true" : "false");
 }
 applySimFull();
 
-// Renderiza o PDF (renderiza todas as páginas em canvas)
-// Nota: para documentos muito grandes é recomendado lazy-loading, que posso adicionar.
-function renderPDF() {
+// show title from filename if available
+titleDisplay.textContent = decodeURIComponent((file.split("/").pop() || "PDF").replace(/\+/g," "));
+
+// render with lazy per-page
+async function loadAndRender() {
   container.innerHTML = "";
-  pdfjsLib.getDocument(file).promise.then(pdf => {
-    pdfDoc = pdf;
-    for (let i = 1; i <= pdf.numPages; i++) {
-      pdf.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        // define tamanho do canvas para render nativo; depois usa CSS para responsividade
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        canvas.className = "pdf-page";
-
-        // deixa responsivo (reduz se cabe na tela)
-        canvas.style.maxWidth = "100%";
-        canvas.style.height = "auto";
-        canvas.style.display = "block";
-
-        container.appendChild(canvas);
-        page.render({ canvasContext: ctx, viewport }).promise.then(() => {
-          // se o dark mode estiver ativo, a regra CSS cuida do visual (ou podemos aplicar filtro aqui)
-        });
-      });
+  renderedPages.clear();
+  pageIndicator.textContent = "Carregando...";
+  try {
+    pdfDoc = await pdfjsLib.getDocument(file).promise;
+    updatePageIndicator();
+    // create placeholders for each page
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const pageWrapper = document.createElement("div");
+      pageWrapper.className = "page-wrapper";
+      pageWrapper.dataset.pageNumber = i;
+      pageWrapper.style.minHeight = "50px";
+      container.appendChild(pageWrapper);
     }
-  }).catch(err => {
-    container.innerHTML = `<p class="p-3 text-center text-danger">Erro ao abrir PDF: ${err.message}</p>`;
+    // IntersectionObserver para render only when visible
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const wrapper = entry.target;
+          const p = Number(wrapper.dataset.pageNumber);
+          if (!renderedPages.has(p)) renderPage(p, wrapper);
+        }
+      });
+    }, { root: container, rootMargin: '400px' });
+
+    document.querySelectorAll(".page-wrapper").forEach(el => io.observe(el));
+  } catch (err) {
     console.error(err);
-  });
+    container.innerHTML = `<p class="p-3 text-center text-danger">Erro ao abrir PDF: ${err.message}</p>`;
+  }
 }
 
-// controles
-zoomInBtn.addEventListener("click", () => {
-  scale = Math.min(3, scale + 0.2);
-  renderPDF();
-});
+// renderiza página na wrapper fornecida
+async function renderPage(pageNum, wrapper) {
+  if (!pdfDoc) return;
+  wrapper.innerHTML = ""; // limpa
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.className = "pdf-page";
+  const context = canvas.getContext("2d");
 
-zoomOutBtn.addEventListener("click", () => {
-  scale = Math.max(0.6, scale - 0.2);
-  renderPDF();
-});
+  // set canvas for native resolution but keep responsive using CSS
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = "100%";
+  canvas.style.height = "auto";
 
-toggleDarkBtn.addEventListener("click", () => {
+  wrapper.appendChild(canvas);
+  // render
+  await page.render({ canvasContext: context, viewport }).promise;
+  renderedPages.add(pageNum);
+
+  // update currentPage heuristics (first visible page)
+  if (pageNum === currentPage || !currentPage) {
+    currentPage = pageNum;
+    saveProgress();
+    updatePageIndicator();
+  }
+}
+
+// update page indicator
+function updatePageIndicator() {
+  if (!pdfDoc) { pageIndicator.textContent = "—"; return; }
+  pageIndicator.textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
+}
+
+// save current page and scale
+function saveProgress(){
+  localStorage.setItem("reader-page", currentPage);
+  localStorage.setItem("reader-scale", scale);
+}
+
+// next / prev navigation (scrolls to wrapper)
+function goToPage(n) {
+  if (!pdfDoc) return;
+  n = Math.min(Math.max(1, n), pdfDoc.numPages);
+  const wrapper = document.querySelector(`.page-wrapper[data-page-number='${n}']`);
+  if (wrapper) {
+    wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+    currentPage = n;
+    saveProgress();
+    updatePageIndicator();
+  }
+}
+
+prevBtn?.addEventListener("click", () => goToPage(currentPage - 1));
+nextBtn?.addEventListener("click", () => goToPage(currentPage + 1));
+
+// zoom handlers (re-render pages when zoom changes)
+let zoomTimeout;
+function setScale(newScale) {
+  scale = Math.min(3, Math.max(0.6, newScale));
+  localStorage.setItem("reader-scale", scale);
+  // clear all render and reinitialize
+  if (pdfDoc) {
+    // quick throttle
+    clearTimeout(zoomTimeout);
+    zoomTimeout = setTimeout(() => loadAndRender(), 220);
+  }
+}
+zoomInBtn?.addEventListener("click", () => setScale(scale + 0.2));
+zoomOutBtn?.addEventListener("click", () => setScale(scale - 0.2));
+
+// dark toggle
+toggleDarkBtn?.addEventListener("click", () => {
   darkMode = !darkMode;
-  localStorage.setItem("reader-dark", darkMode ? "true" : "false");
-  applyDarkMode();
+  localStorage.setItem("reader-dark", darkMode);
+  applyDark();
 });
 
-toggleFullBtn.addEventListener("click", () => {
-  // tentamos requestFullscreen primeiro (p/ browsers que suportam)
-  const el = document.documentElement;
+// fullscreen toggle: try native first then simulated
+toggleFullBtn?.addEventListener("click", async () => {
   if (document.fullscreenEnabled) {
-    // navegadores que suportam: usa api nativa
     if (!document.fullscreenElement) {
-      el.requestFullscreen?.().catch(()=>{/* ignore */});
+      try { await document.documentElement.requestFullscreen(); }
+      catch (e) { /* ignore */ }
     } else {
-      document.exitFullscreen?.();
+      try { await document.exitFullscreen(); }
+      catch(e) {}
     }
   } else {
-    // fallback / iOS: simular fullscreen via CSS
+    // fallback: simulated fullscreen (for iOS)
     isSimFull = !isSimFull;
-    localStorage.setItem("reader-sim-full", isSimFull ? "true" : "false");
+    localStorage.setItem("reader-sim-full", isSimFull);
     applySimFull();
-    // ao simular, rola o viewport pro topo para esconder barras
-    if (isSimFull) {
-      window.scrollTo({ top: 0, behavior: "instant" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }
+    // scroll to top to hide UI bars on mobile
+    if (isSimFull) window.scrollTo({ top:0, behavior:"instant" });
   }
 });
 
-// fecha simulated fullscreen se usuário apertar ESC (no desktop)
+// esc to exit simulated fullscreen
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    if (document.fullscreenElement) document.exitFullscreen?.();
+    if (document.fullscreenElement) document.exitFullscreen();
     if (isSimFull) {
       isSimFull = false;
       localStorage.setItem("reader-sim-full", "false");
@@ -153,18 +200,34 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Inicializa
-renderPDF();
-
-// Acessibilidade: toque duplo no container alterna UI (ex.: esconde/mostra nav)
+// double-tap toggles sim-full (mobile)
 let lastTap = 0;
 container.addEventListener("touchend", (e) => {
   const now = Date.now();
   if (now - lastTap < 300) {
-    // double-tap detectado
     isSimFull = !isSimFull;
-    localStorage.setItem("reader-sim-full", isSimFull ? "true" : "false");
+    localStorage.setItem("reader-sim-full", isSimFull);
     applySimFull();
   }
   lastTap = now;
 });
+
+// track scroll to update currentPage (approx: first fully visible page)
+container.addEventListener("scroll", () => {
+  const wrappers = Array.from(document.querySelectorAll(".page-wrapper"));
+  for (let w of wrappers) {
+    const rect = w.getBoundingClientRect();
+    if (rect.top >= 60 && rect.top < window.innerHeight/2) {
+      const p = Number(w.dataset.pageNumber);
+      if (p && p !== currentPage) {
+        currentPage = p;
+        saveProgress();
+        updatePageIndicator();
+      }
+      break;
+    }
+  }
+});
+
+// initialize
+loadAndRender();
