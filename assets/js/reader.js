@@ -1,33 +1,50 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Leitor PDF</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+const params = new URLSearchParams(window.location.search);
+const file = params.get("file");
+const container = document.getElementById("pdfViewer");
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/styles.css">
-</head>
+if (!file) {
+  container.innerHTML = "<p class='text-center p-3'>PDF não informado</p>";
+  throw new Error("PDF não informado");
+}
 
-<body class="reader-body">
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-<nav class="navbar bg-light shadow-sm px-2">
-  <a href="/" class="btn btn-link">← Voltar</a>
+let scale = window.innerWidth < 768 ? 1.1 : 1.4;
 
-  <div class="ms-auto d-flex gap-2">
-    <button id="zoomOut" class="btn btn-sm btn-outline-secondary">−</button>
-    <button id="zoomIn" class="btn btn-sm btn-outline-secondary">+</button>
-    <button id="fullscreen" class="btn btn-sm btn-outline-secondary">⛶</button>
-  </div>
-</nav>
+function renderPDF() {
+  container.innerHTML = "";
 
-<div id="pdfViewer"></div>
+  pdfjsLib.getDocument(file).promise.then(pdf => {
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      pdf.getPage(pageNum).then(page => {
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
 
-<!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.className = "pdf-page";
 
-<!-- SEU JS DO LEITOR -->
-<script src="/assets/js/reader.js"></script>
+        container.appendChild(canvas);
+        page.render({ canvasContext: ctx, viewport });
+      });
+    }
+  });
+}
 
-</body>
-</html>
+renderPDF();
+
+document.getElementById("zoomIn").onclick = () => {
+  scale += 0.2;
+  renderPDF();
+};
+
+document.getElementById("zoomOut").onclick = () => {
+  scale = Math.max(0.8, scale - 0.2);
+  renderPDF();
+};
+
+document.getElementById("fullscreen").onclick = () => {
+  if (container.requestFullscreen) container.requestFullscreen();
+};
