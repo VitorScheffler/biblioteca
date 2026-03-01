@@ -1,9 +1,7 @@
-// assets/js/reader.js (ATUALIZADO — qualidade melhorada para telas retina)
-// Render com PDF.js + lazy rendering + scaling para devicePixelRatio (retina)
-// Observação: aumentar muito o outputScale melhora qualidade, mas consome memória/CPU.
-// Recomendo maxOutputScale entre 1.5 e 2.0 (2 é bom para a maioria dos iPhones).
+// assets/js/reader.js
+// Leitor PDF: PDF.js + lazy render por página + DPR scaling (retina) + simulated fullscreen (iOS) + dark mode
+// Comentários inline para facilitar manutenção.
 
-// Elementos
 const params = new URLSearchParams(window.location.search);
 const file = params.get("file");
 const container = document.getElementById("pdfViewer");
@@ -21,228 +19,180 @@ if (!file) {
   throw new Error("PDF não informado");
 }
 
-// PDF.js worker
+// Set worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 let pdfDoc = null;
-let scale = parseFloat(localStorage.getItem("reader-scale")) || (window.innerWidth < 768 ? 1.05 : 1.3);
+let scale = parseFloat(localStorage.getItem("reader-scale")) || (window.innerWidth < 768 ? 1.05 : 1.25);
 let currentPage = parseInt(localStorage.getItem("reader-page")) || 1;
 let renderedPages = new Set();
 let darkMode = localStorage.getItem("reader-dark") === "true";
 let isSimFull = localStorage.getItem("reader-sim-full") === "true";
 
-// Limitador de output scale (retina)
-const maxOutputScale = 2.0; // ajuste aqui: 1.5 ~ 2.0 é bom (2 fornece boa nitidez em retina)
-// função que retorna outputScale útil (devicePixelRatio limitado)
-function getOutputScale() {
-  const dpr = window.devicePixelRatio || 1;
-  // limita pra evitar uso excessivo de memória em telas muito densas
-  return Math.min(dpr, maxOutputScale);
-}
+// DPR limiter (evita usar DPR muito alto)
+const maxOutputScale = 2.0;
+function getOutputScale(){ const dpr = window.devicePixelRatio || 1; return Math.min(dpr, maxOutputScale); }
 
-// Ajusta a altura do viewer para evitar iOS address bar issues
-function setViewerHeight(){
-  container.style.height = window.innerHeight + "px";
-}
+// ajuste de altura do viewer para iOS address bar
+function setViewerHeight(){ container.style.height = window.innerHeight + "px"; }
 window.addEventListener("resize", setViewerHeight);
-window.addEventListener("orientationchange", () => setTimeout(setViewerHeight, 300));
+window.addEventListener("orientationchange", ()=> setTimeout(setViewerHeight,300));
 setViewerHeight();
 
-// apply dark mode
-function applyDark() {
-  document.body.classList.toggle("dark", darkMode);
-  toggleDarkBtn?.setAttribute("aria-pressed", darkMode ? "true" : "false");
-}
-applyDark();
+// aplica dark / sim-full
+function applyDark(){ document.body.classList.toggle("dark", darkMode); toggleDarkBtn?.setAttribute("aria-pressed", darkMode ? "true" : "false"); }
+function applySimFull(){ document.body.classList.toggle("sim-full", isSimFull); toggleFullBtn?.setAttribute("aria-pressed", isSimFull ? "true" : "false"); }
+applyDark(); applySimFull();
 
-// apply simulated fullscreen
-function applySimFull() {
-  document.body.classList.toggle("sim-full", isSimFull);
-  toggleFullBtn?.setAttribute("aria-pressed", isSimFull ? "true" : "false");
-}
-applySimFull();
-
-// show title from filename if available
+// exibe título
 titleDisplay.textContent = decodeURIComponent((file.split("/").pop() || "PDF").replace(/\+/g," "));
 
-// --------------------------------------------------
-// loadAndRender: cria wrappers e observa visibilidade
-// --------------------------------------------------
-async function loadAndRender() {
-  container.innerHTML = "";
-  renderedPages.clear();
+// cria wrappers e observer
+async function loadAndRender(){
+  container.innerHTML = ""; renderedPages.clear();
   pageIndicator.textContent = "Carregando...";
-  try {
+  try{
     pdfDoc = await pdfjsLib.getDocument(file).promise;
     updatePageIndicator();
-    // create wrappers for each page
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const pageWrapper = document.createElement("div");
-      pageWrapper.className = "page-wrapper";
-      pageWrapper.dataset.pageNumber = i;
-      pageWrapper.style.minHeight = "60px"; // placeholder height
-      container.appendChild(pageWrapper);
+    // criar placeholders
+    for(let i=1;i<=pdfDoc.numPages;i++){
+      const wrapper = document.createElement("div");
+      wrapper.className = "page-wrapper";
+      wrapper.dataset.pageNumber = i;
+      // opcional: altura mínima para evitar salto visual
+      wrapper.style.minHeight = "80px";
+      container.appendChild(wrapper);
     }
-
-    // IntersectionObserver para render only when visible
+    // observer: renderiza quando wrapper está visível
     const io = new IntersectionObserver(entries => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const wrapper = entry.target;
-          const p = Number(wrapper.dataset.pageNumber);
-          if (!renderedPages.has(p)) renderPage(p, wrapper);
+        if(entry.isIntersecting){
+          const w = entry.target;
+          const p = Number(w.dataset.pageNumber);
+          if(!renderedPages.has(p)) renderPage(p, w);
         }
       });
-    }, { root: container, rootMargin: '600px' }); // rootMargin maior para carregar antes
+    }, { root: container, rootMargin: '600px' });
 
     document.querySelectorAll(".page-wrapper").forEach(el => io.observe(el));
-  } catch (err) {
+  }catch(err){
     console.error(err);
     container.innerHTML = `<p class="p-3 text-center text-danger">Erro ao abrir PDF: ${err.message}</p>`;
   }
 }
 
-// --------------------------------------------------
-// renderPage: renderiza uma página com scaling DPR
-// --------------------------------------------------
-async function renderPage(pageNum, wrapper) {
-  if (!pdfDoc) return;
+// renderiza uma página com DPR scaling
+async function renderPage(pageNum, wrapper){
+  if(!pdfDoc) return;
   wrapper.innerHTML = ""; // limpa placeholder
-
-  try {
+  try{
     const page = await pdfDoc.getPage(pageNum);
-
-    // viewport com a escala desejada (visível)
     const viewport = page.getViewport({ scale });
 
-    // outputScale (para nitidez em telas retina)
+    // output scale para nitidez
     const outputScale = getOutputScale();
 
-    // canvas em alta resolução: largura/altura * outputScale
+    // canvas dimensões físicas
     const canvas = document.createElement("canvas");
     canvas.className = "pdf-page";
-    const context = canvas.getContext("2d", { alpha: false });
+    const ctx = canvas.getContext("2d", { alpha: false });
 
-    // dimensões físicas do canvas (pixels reais)
     canvas.width = Math.floor(viewport.width * outputScale);
     canvas.height = Math.floor(viewport.height * outputScale);
 
-    // CSS tamanho (o que o usuário vê) = tamanho do viewport (sem DPR)
+    // tamanho visível (CSS)
     canvas.style.width = Math.floor(viewport.width) + "px";
     canvas.style.height = Math.floor(viewport.height) + "px";
 
-    // configura transformação para que o desenho seja escalado corretamente
-    context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+    // transforma para desenhar em DPR
+    ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
 
+    // centraliza: canvas dentro do wrapper (wrapper usa flex center)
     wrapper.appendChild(canvas);
 
-    // Renderiza usando viewport "normal" (scale) — como usamos setTransform, passar viewport é ok.
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
-
-    await page.render(renderContext).promise;
-
-    // marca como renderizada
+    await page.render({ canvasContext: ctx, viewport }).promise;
     renderedPages.add(pageNum);
 
-    // atualiza currentPage heurístico (se for a primeira página visível)
-    const firstVisible = currentPage === pageNum || !currentPage;
-    if (firstVisible) {
-      currentPage = pageNum;
-      saveProgress();
-      updatePageIndicator();
-    }
-  } catch (err) {
+    // se for a primeira visível, atualiza currentPage
+    if(!currentPage) currentPage = pageNum;
+    if(pageNum === currentPage) { saveProgress(); updatePageIndicator(); }
+  }catch(err){
     console.error("Erro renderizando página", pageNum, err);
   }
 }
 
-// update page indicator
-function updatePageIndicator() {
-  if (!pdfDoc) { pageIndicator.textContent = "—"; return; }
+function updatePageIndicator(){
+  if(!pdfDoc) { pageIndicator.textContent = "—"; return; }
   pageIndicator.textContent = `Página ${currentPage} / ${pdfDoc.numPages}`;
 }
 
-// save current page and scale
 function saveProgress(){
   localStorage.setItem("reader-page", currentPage);
   localStorage.setItem("reader-scale", scale);
 }
 
-// next / prev navigation (scroll to wrapper)
-function goToPage(n) {
-  if (!pdfDoc) return;
+// navegação por página (scroll para wrapper)
+function goToPage(n){
+  if(!pdfDoc) return;
   n = Math.min(Math.max(1, n), pdfDoc.numPages);
   const wrapper = document.querySelector(`.page-wrapper[data-page-number='${n}']`);
-  if (wrapper) {
+  if(wrapper){
     wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
-    currentPage = n;
-    saveProgress();
-    updatePageIndicator();
+    currentPage = n; saveProgress(); updatePageIndicator();
   }
 }
+prevBtn?.addEventListener("click", ()=> goToPage(currentPage - 1));
+nextBtn?.addEventListener("click", ()=> goToPage(currentPage + 1));
 
-prevBtn?.addEventListener("click", () => goToPage(currentPage - 1));
-nextBtn?.addEventListener("click", () => goToPage(currentPage + 1));
-
-// zoom handlers (re-render pages when zoom changes)
+// zoom (re-render com throttle)
 let zoomTimeout;
-function setScale(newScale) {
+function setScale(newScale){
   scale = Math.min(3, Math.max(0.6, newScale));
   localStorage.setItem("reader-scale", scale);
-  // clear all render and reinitialize (throttle to avoid many re-renders)
-  if (pdfDoc) {
+  if(pdfDoc){
     clearTimeout(zoomTimeout);
-    zoomTimeout = setTimeout(() => loadAndRender(), 220);
+    zoomTimeout = setTimeout(()=> loadAndRender(), 220);
   }
 }
-zoomInBtn?.addEventListener("click", () => setScale(scale + 0.2));
-zoomOutBtn?.addEventListener("click", () => setScale(scale - 0.2));
+zoomInBtn?.addEventListener("click", ()=> setScale(scale + 0.2));
+zoomOutBtn?.addEventListener("click", ()=> setScale(scale - 0.2));
 
-// dark toggle
-toggleDarkBtn?.addEventListener("click", () => {
+// toggle dark
+toggleDarkBtn?.addEventListener("click", ()=>{
   darkMode = !darkMode;
   localStorage.setItem("reader-dark", darkMode);
   applyDark();
 });
 
-// fullscreen toggle: try native first then simulated
-toggleFullBtn?.addEventListener("click", async () => {
-  if (document.fullscreenEnabled) {
-    if (!document.fullscreenElement) {
-      try { await document.documentElement.requestFullscreen(); }
-      catch (e) { /* ignore */ }
+// fullscreen: tenta nativo, senão simula (iOS)
+toggleFullBtn?.addEventListener("click", async ()=>{
+  if(document.fullscreenEnabled){
+    if(!document.fullscreenElement){
+      try{ await document.documentElement.requestFullscreen(); }catch(e){}
     } else {
-      try { await document.exitFullscreen(); }
-      catch(e) {}
+      try{ await document.exitFullscreen(); }catch(e){}
     }
   } else {
     isSimFull = !isSimFull;
     localStorage.setItem("reader-sim-full", isSimFull);
     applySimFull();
-    if (isSimFull) window.scrollTo({ top:0, behavior:"instant" });
+    if(isSimFull) window.scrollTo({ top:0, behavior:"instant" });
   }
 });
 
-// esc to exit simulated fullscreen
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    if (document.fullscreenElement) document.exitFullscreen();
-    if (isSimFull) {
-      isSimFull = false;
-      localStorage.setItem("reader-sim-full", "false");
-      applySimFull();
-    }
+// ESC sai do sim-full / full
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape"){
+    if(document.fullscreenElement) document.exitFullscreen();
+    if(isSimFull){ isSimFull = false; localStorage.setItem("reader-sim-full","false"); applySimFull(); }
   }
 });
 
-// double-tap toggles sim-full (mobile)
+// double-tap para toggle sim-full (mobile)
 let lastTap = 0;
-container.addEventListener("touchend", (e) => {
+container.addEventListener("touchend", (e)=>{
   const now = Date.now();
-  if (now - lastTap < 300) {
+  if(now - lastTap < 300){
     isSimFull = !isSimFull;
     localStorage.setItem("reader-sim-full", isSimFull);
     applySimFull();
@@ -250,22 +200,21 @@ container.addEventListener("touchend", (e) => {
   lastTap = now;
 });
 
-// track scroll to update currentPage (approx: first visible page)
-container.addEventListener("scroll", () => {
+// manter currentPage aproximado durante scroll
+container.addEventListener("scroll", ()=>{
   const wrappers = Array.from(document.querySelectorAll(".page-wrapper"));
-  for (let w of wrappers) {
+  for(let w of wrappers){
     const rect = w.getBoundingClientRect();
-    if (rect.top >= 60 && rect.top < window.innerHeight/2) {
+    // consideramos a primeira wrapper cujo topo esteja visível abaixo da nav
+    if(rect.top >= 60 && rect.top < window.innerHeight/2){
       const p = Number(w.dataset.pageNumber);
-      if (p && p !== currentPage) {
-        currentPage = p;
-        saveProgress();
-        updatePageIndicator();
+      if(p && p !== currentPage){
+        currentPage = p; saveProgress(); updatePageIndicator();
       }
       break;
     }
   }
 });
 
-// initialize
+// inicializa
 loadAndRender();

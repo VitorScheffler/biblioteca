@@ -1,5 +1,5 @@
 // assets/js/app.js
-// Gerencia a lista de livros (books.json), busca, dark mode na index e render de cards.
+// Renderiza grid, aplica dark mode na index e fornece estrutura de card (thumb + title)
 
 // Elementos
 const grid = document.getElementById("booksGrid");
@@ -9,7 +9,7 @@ const toggleDarkBtn = document.getElementById("toggleDarkIndex");
 
 let books = [];
 
-// Aplica modo escuro guardado
+// aplicar dark mode salvo
 let darkIndex = localStorage.getItem("index-dark") === "true";
 function applyDarkIndex() {
   document.body.classList.toggle("dark", darkIndex);
@@ -17,13 +17,14 @@ function applyDarkIndex() {
 }
 applyDarkIndex();
 
+// alterna dark mode
 toggleDarkBtn?.addEventListener("click", () => {
   darkIndex = !darkIndex;
   localStorage.setItem("index-dark", darkIndex);
   applyDarkIndex();
 });
 
-// Carrega books.json
+// carregar books.json
 fetch("/books/books.json")
   .then(res => {
     if (!res.ok) throw new Error("Não foi possível carregar books.json");
@@ -38,7 +39,7 @@ fetch("/books/books.json")
     grid.innerHTML = `<div class="p-3 text-center text-muted">Erro ao carregar livros.</div>`;
   });
 
-// Render de cards
+// função para criar card (thumb + título dentro de uma div)
 function renderBooks(list) {
   grid.innerHTML = "";
   if (!list || !list.length) {
@@ -49,34 +50,36 @@ function renderBooks(list) {
 
   list.forEach(book => {
     const col = document.createElement("div");
-    col.className = "col-item";
+    col.className = "col-item"; // layout controlado via CSS flex
 
+    // estrutura: .book-card -> .book-thumb (img) + .book-info (title + author) + actions
     col.innerHTML = `
-      <article class="book-card h-100" role="article">
-        <div class="book-cover" aria-hidden="true">
+      <article class="book-card" role="article">
+        <div class="book-thumb" aria-hidden="true">
           <img src="${book.cover || '/assets/capas/default.jpg'}" alt="Capa: ${escapeHtml(book.title)}">
         </div>
-        <div>
+
+        <div class="book-info">
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">${escapeHtml(book.author || "")}</p>
         </div>
-        <div class="card-actions mt-2">
-          <a class="btn btn-primary btn-sm w-100" href="/reader.html?file=${encodeURIComponent(book.file)}" role="button" aria-label="Ler ${escapeHtml(book.title)}">Ler</a>
+
+        <div class="card-actions">
+          <a class="btn btn-primary btn-sm" href="/reader.html?file=${encodeURIComponent(book.file)}" role="button" aria-label="Ler ${escapeHtml(book.title)}">Ler</a>
         </div>
       </article>
     `;
+
     grid.appendChild(col);
   });
 }
 
-// Busca simples (client-side)
+// busca client-side simples
 searchInput?.addEventListener("input", () => {
   const q = (searchInput.value || "").trim().toLowerCase();
-  const filtered = books.filter(b => {
-    return (b.title + " " + (b.author || "")).toLowerCase().includes(q);
-  });
+  const filtered = books.filter(b => (b.title + " " + (b.author || "")).toLowerCase().includes(q));
   renderBooks(filtered);
 });
 
-// util: escape para inserir texto em HTML
+// helper: escape
 function escapeHtml(str){ return String(str || "").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[s])); }
