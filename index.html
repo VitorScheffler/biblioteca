@@ -2,56 +2,171 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Minha Biblioteca — PDFs</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Biblioteca — PDF</title>
 
-  <!-- Bootstrap (apenas para modal) -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.5/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
-    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#f6f7f9; margin:0; }
-    .navbar { background:#111827; color:#fff; }
-    .navbar .navbar-brand { color:#fff; }
-    .book-cover { height:200px; object-fit:cover; border-radius:6px 6px 0 0; }
-    .card { cursor:pointer; border-radius:8px; overflow:hidden; }
-    .card .card-body { padding:.6rem .75rem; }
-    .grid-wrap { padding:18px; max-width:1200px; margin:0 auto; }
-    .empty { text-align:center; color:#6b7280; padding:48px 0; }
+    body { background:#0b0d0f; color:#e6eef8; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
+    .book-cover { height:190px; object-fit:cover; border-top-left-radius: .375rem; border-top-right-radius: .375rem; }
+    .card { background:#0f1724; border:0; color:inherit; }
+    /* Modal small-screen fullscreen tweak */
+    @media (max-width: 576px) {
+      #readerModal .modal-content { height: 100vh; border-radius: 0; background: #071019; }
+      #readerModal .modal-body { padding:0; }
+      #readerIframe { height: calc(100vh - var(--reader-header-height, 56px)); }
+    }
   </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">📚 Minha Biblioteca</a>
-    </div>
-  </nav>
+<body class="p-3">
+  <div class="container">
+    <h3 class="mb-3">Minha Biblioteca</h3>
 
-  <main class="grid-wrap">
-    <div id="booksGrid" class="row g-3"></div>
-    <div id="emptyNotice" class="empty d-none">Nenhum livro encontrado. Verifique <code>books.json</code> e os caminhos.</div>
-  </main>
+    <div id="emptyNotice" class="alert alert-warning d-none">Nenhum livro encontrado.</div>
 
-  <!-- Reader Modal (fullscreen modal com iframe) -->
+    <div class="row g-3" id="booksGrid"></div>
+  </div>
+
+  <!-- Modal: leitor -->
   <div class="modal fade" id="readerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen">
-      <div class="modal-content bg-dark">
-        <div class="modal-header border-0">
-          <h5 class="modal-title text-light" id="readerTitle">Leitor</h5>
-          <div class="d-flex gap-2">
-            <button id="readerClearBtn" class="btn btn-sm btn-outline-light" title="Limpar progresso do livro">Limpar progresso</button>
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header py-2 px-3" id="readerHeader" style="--reader-header-height:56px;">
+          <div>
+            <h6 class="modal-title mb-0" id="readerTitle">Livro</h6>
+            <small id="readerAuthor" class="text-muted">Autor</small>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <button id="readerClearBtn" class="btn btn-sm btn-outline-light">Limpar progresso</button>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
           </div>
         </div>
+
         <div class="modal-body p-0" style="height:calc(100vh - 56px);">
-          <iframe id="readerIframe" class="w-100 h-100" style="border:0;" allowfullscreen></iframe>
+          <!-- iframe que carrega viewer.html -->
+          <iframe id="readerIframe" src="" style="width:100%; height:100%; border:0;" title="Leitor de PDF"></iframe>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap JS (modal) -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="script.js"></script>
+
+  <!-- script.js (carrega books.json e controla modal) -->
+  <script>
+    // --- Início script.js ---
+    const grid = document.getElementById('booksGrid');
+    const emptyNotice = document.getElementById('emptyNotice');
+    const readerIframe = document.getElementById('readerIframe');
+    const readerTitle = document.getElementById('readerTitle');
+    const readerAuthor = document.getElementById('readerAuthor');
+    const readerClearBtn = document.getElementById('readerClearBtn');
+    let currentBookFile = null;
+
+    // carrega a lista
+    fetch('books.json', { cache: 'no-store' })
+      .then(res => {
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(data => {
+        if(!Array.isArray(data) || data.length === 0){
+          emptyNotice.classList.remove('d-none');
+          return;
+        }
+        renderBooks(data);
+      })
+      .catch(err => {
+        console.error('Erro carregando books.json', err);
+        emptyNotice.textContent = 'Erro carregando lista de livros. Verifique books.json (console para detalhes).';
+        emptyNotice.classList.remove('d-none');
+      });
+
+    function renderBooks(books){
+      grid.innerHTML = '';
+      books.forEach(book => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3';
+
+        const cover = book.cover && book.cover.trim() ? book.cover : '';
+        const coverHtml = cover
+          ? `<img src="${cover}" alt="${escapeHtml(book.title)}" class="book-cover w-100">`
+          : `<div style="height:190px;background:#e6edf6;color:#0b0d0f;display:flex;align-items:center;justify-content:center;font-weight:600">PDF</div>`;
+
+        col.innerHTML = `
+          <div class="card h-100 shadow-sm">
+            ${coverHtml}
+            <div class="card-body">
+              <h6 class="mb-1" style="font-size:14px">${escapeHtml(book.title)}</h6>
+              <small class="text-muted">${escapeHtml(book.author || '')}</small>
+            </div>
+          </div>
+        `;
+
+        col.addEventListener('click', () => openReader(book));
+        grid.appendChild(col);
+      });
+    }
+
+    function openReader(book){
+      currentBookFile = book.file;
+      readerTitle.textContent = book.title || decodeURIComponent(book.file || '');
+      readerAuthor.textContent = book.author || '';
+
+      // passa o file e o title para o viewer via query string (viewer utiliza pdf.js)
+      // adicionamos também um parâmetro minimalUI=1 para habilitar comportamentos mobile-friendly
+      const src = `viewer.html?file=${encodeURIComponent(book.file)}&title=${encodeURIComponent(book.title || '')}&minimalUI=1`;
+      readerIframe.src = src;
+
+      const modalEl = document.getElementById('readerModal');
+      const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+      modal.show();
+
+      // limpar iframe ao fechar para liberar memória
+      modalEl.addEventListener('hidden.bs.modal', function onHidden(){
+        readerIframe.src = '';
+        // garantir que o header volte a aparecer ao fechar
+        document.getElementById('readerHeader').classList.remove('d-none');
+        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+      }, { once:true });
+    }
+
+    // botão para limpar progresso do livro atual
+    readerClearBtn.addEventListener('click', ()=>{
+      if(!currentBookFile) return alert('Nenhum livro aberto.');
+      const key = 'pdf-progress-' + currentBookFile;
+      localStorage.removeItem(key);
+      alert('Progresso limpo para este livro.');
+    });
+
+    // Escuta mensagens vindas do viewer (iframe) para esconder/mostrar o header/modal menu
+    window.addEventListener('message', (ev) => {
+      // opcional: checar origem se necessário
+      if(!ev.data || typeof ev.data !== 'object') return;
+      const data = ev.data;
+      // toggle UI
+      if(data.type === 'toggle_ui'){
+        const header = document.getElementById('readerHeader');
+        if(data.hidden) header.classList.add('d-none');
+        else header.classList.remove('d-none');
+      }
+      // também suportamos mensagens explicitas
+      if(data.type === 'ui_hidden'){
+        document.getElementById('readerHeader').classList.add('d-none');
+      } else if(data.type === 'ui_shown'){
+        document.getElementById('readerHeader').classList.remove('d-none');
+      }
+    });
+
+    // ajuda simples para escapar texto inserido no HTML
+    function escapeHtml(s){
+      if(!s) return '';
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    }
+    // --- Fim script.js ---
+  </script>
 </body>
 </html>

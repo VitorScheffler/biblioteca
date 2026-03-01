@@ -20,12 +20,10 @@
       --accent: #2b82ff;
     }
     html,body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
-    /* Container that centers the PDF */
     .viewer-root { height:100vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
     .canvas-area { max-width:100%; max-height:100%; display:flex; align-items:center; justify-content:center; overflow:auto; padding:20px; box-sizing:border-box; width:100%; height:100%; }
-    canvas.pdf-canvas { background:white; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); max-width:100%; height:auto; display:block; }
+    canvas.pdf-canvas { background:white; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); max-width:100%; height:auto; display:block; touch-action:pan-y pinch-zoom; }
 
-    /* progress bar (discreta) */
     .progress-bar-wrap {
       position:fixed;
       left:50%;
@@ -43,73 +41,17 @@
       z-index:60;
       transition:opacity 220ms;
     }
-    .progress-track {
-      position:relative;
-      height:6px;
-      background: rgba(255,255,255,0.04);
-      border-radius:999px;
-      flex:1;
-      overflow:hidden;
-      cursor:pointer;
-    }
-    .progress-fill {
-      position:absolute;
-      left:0; top:0; bottom:0;
-      width:0%;
-      background: linear-gradient(90deg, var(--accent), #66a6ff);
-      border-radius:999px;
-      transition: width 220ms ease;
-    }
-    .progress-label {
-      min-width:140px;
-      text-align:right;
-      font-size:13px;
-      color:var(--text);
-      opacity:0.95;
-    }
+    .progress-track { position:relative; height:6px; background: rgba(255,255,255,0.04); border-radius:999px; flex:1; overflow:hidden; cursor:pointer; }
+    .progress-fill { position:absolute; left:0; top:0; bottom:0; width:0%; background: linear-gradient(90deg, var(--accent), #66a6ff); border-radius:999px; transition: width 220ms ease; }
+    .progress-label { min-width:140px; text-align:right; font-size:13px; color:var(--text); opacity:0.95; }
 
-    /* center message */
-    .center-msg {
-      position:absolute;
-      top:12px;
-      left:12px;
-      font-size:13px;
-      color:rgba(230,238,248,0.95);
-      background: rgba(0,0,0,0.2);
-      padding:6px 8px;
-      border-radius:8px;
-      z-index:70;
-      backdrop-filter: blur(3px);
-    }
+    .center-msg { position:absolute; top:12px; left:12px; font-size:13px; color:rgba(230,238,248,0.95); background: rgba(0,0,0,0.2); padding:6px 8px; border-radius:8px; z-index:70; backdrop-filter: blur(3px); }
 
-    /* fullscreen button */
-    #fullscreenBtn{
-      position:fixed;
-      top:14px;
-      right:14px;
-      z-index:80;
-      background:rgba(255,255,255,0.06);
-      border:none;
-      color:#fff;
-      font-size:18px;
-      padding:8px 12px;
-      border-radius:10px;
-      cursor:pointer;
-      backdrop-filter: blur(4px);
-    }
+    #fullscreenBtn{ position:fixed; top:14px; right:14px; z-index:80; background:rgba(255,255,255,0.06); border:none; color:#fff; font-size:18px; padding:8px 12px; border-radius:10px; cursor:pointer; backdrop-filter: blur(4px); }
     #fullscreenBtn:active{ transform:scale(0.96); }
 
-    /* fake fullscreen class — used on iOS where native Fullscreen is limited */
-    .fake-fullscreen{
-      position:fixed !important;
-      inset:0 !important;
-      width:100vw !important;
-      height:100vh !important;
-      z-index:9999 !important;
-      background:var(--bg);
-    }
+    .fake-fullscreen{ position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; z-index:9999 !important; background:var(--bg); }
 
-    /* auto-hide support: hide progress after inactivity */
     .hidden-ui { opacity:0; pointer-events:none; }
 
     @media (max-width:520px){
@@ -139,12 +81,10 @@
 
 <script>
 (async function(){
-  // parâmetros
   const params = new URLSearchParams(location.search);
   const file = params.get('file') || '';
   const titleParam = params.get('title') || '';
 
-  // elementos
   const viewerRoot = document.getElementById('viewerRoot');
   const canvasArea = document.getElementById('canvasArea');
   const canvas = document.getElementById('pdfCanvas');
@@ -161,7 +101,6 @@
     return;
   }
 
-  // estado
   let pdf = null;
   let pageNum = 1;
   let totalPages = 0;
@@ -172,11 +111,11 @@
   let zoomManual = false;
   const storageKey = 'pdf-progress-' + file;
 
-  // recuperar progresso
+  const touchSupported = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
   const saved = parseInt(localStorage.getItem(storageKey));
   if(!isNaN(saved) && saved >= 1) pageNum = saved;
 
-  // helper UI
   function showMsg(txt, timeout=3000){
     centerMsg.textContent = txt;
     centerMsg.style.display = 'block';
@@ -186,7 +125,16 @@
     }
   }
 
-  // Carregar PDF
+  // helper: post messages to parent to toggle modal header/menu
+  function postToggleUI(hidden){
+    try {
+      // two formats for compatibility: toggle_ui & ui_hidden/ui_shown
+      parent.postMessage({ type: 'toggle_ui', hidden }, '*');
+      parent.postMessage({ type: hidden ? 'ui_hidden' : 'ui_shown' }, '*');
+    } catch(e){}
+  }
+
+  // load PDF
   showMsg('Carregando...');
   try{
     const loadingTask = pdfjsLib.getDocument({ url: file, withCredentials:false });
@@ -202,12 +150,10 @@
     return;
   }
 
-  // RENDER
   async function renderPage(n){
     rendering = true;
     try {
       const page = await pdf.getPage(n);
-      // compute fit scale if not manual zoom
       const vp1 = page.getViewport({ scale:1, rotation });
       const containerW = Math.max(80, canvasArea.clientWidth - 40);
       const containerH = Math.max(80, canvasArea.clientHeight - 40);
@@ -224,7 +170,6 @@
       canvas.style.width = Math.floor(viewport.width / outputScale) + 'px';
       canvas.style.height = Math.floor(viewport.height / outputScale) + 'px';
 
-      // clear
       ctx.save();
       ctx.fillStyle = '#fff';
       ctx.fillRect(0,0,canvas.width, canvas.height);
@@ -234,7 +179,6 @@
       const renderTask = page.render(renderContext);
       await renderTask.promise;
 
-      // after render
       rendering = false;
       localStorage.setItem(storageKey, n);
       updateProgressUI();
@@ -258,15 +202,15 @@
     }
   }
 
-  // update progress UI
   function updateProgressUI(){
     const pct = totalPages ? Math.round((pageNum/totalPages)*100) : 0;
     progressFill.style.width = pct + '%';
     progressLabel.textContent = `Página ${pageNum} / ${totalPages} — ${pct}%`;
   }
 
-  // Navigation via click/tap
+  // Click navigation: disabled on touch devices (prevents double-trigger)
   canvas.addEventListener('click', (e)=>{
+    if(touchSupported) return; // evita trigger duplo em dispositivos touch
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if(x < rect.width * 0.42){
@@ -278,20 +222,56 @@
     }
   });
 
-  // touch support
-  let touchStartX = null;
-  canvas.addEventListener('touchstart', (e)=>{ if(e.touches && e.touches[0]) touchStartX = e.touches[0].clientX; }, {passive:true});
-  canvas.addEventListener('touchend', (e)=>{
-    if(!touchStartX) return;
-    const touchEndX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : null;
-    if(touchEndX === null){ touchStartX = null; return; }
-    const rect = canvas.getBoundingClientRect();
-    const x = touchEndX - rect.left;
-    if(x < rect.width * 0.42){ if(pageNum > 1) queueRender(pageNum - 1); }
-    else if(x > rect.width * 0.58){ if(pageNum < totalPages) queueRender(pageNum + 1); }
-    else { toggleZoom(); }
-    touchStartX = null;
-  }, {passive:true});
+  // Touch swipe (robusto) - apenas uma ação por gesto
+  let touchStartX = 0;
+  let touchStartY = 0;
+  canvas.addEventListener('touchstart', (e)=> {
+    if(!e.touches || !e.touches[0]) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive:true });
+
+  canvas.addEventListener('touchend', (e)=> {
+    if(!e.changedTouches || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    // se foi mais vertical que horizontal, considerar scroll e ignorar
+    if(Math.abs(dy) > Math.abs(dx)) return;
+
+    // mínimo para considerar swipe
+    if(Math.abs(dx) < 50) {
+      // se foi um toque curto (não swipe), tratamos como "toggle UI / zoom"
+      toggleUIFromTouch();
+      return;
+    }
+
+    if(dx < 0 && pageNum < totalPages){
+      queueRender(pageNum + 1);
+    } else if(dx > 0 && pageNum > 1){
+      queueRender(pageNum - 1);
+    }
+  }, { passive:true });
+
+  // toggle UI (progress + fullscreen button) — e informar o parent para esconder header
+  let uiHidden = false;
+  function toggleUI(){
+    uiHidden = !uiHidden;
+    if(uiHidden){
+      progressWrap.classList.add('hidden-ui');
+      fsBtn.classList.add('hidden-ui');
+      postToggleUI(true);
+    } else {
+      progressWrap.classList.remove('hidden-ui');
+      fsBtn.classList.remove('hidden-ui');
+      postToggleUI(false);
+    }
+  }
+
+  function toggleUIFromTouch(){
+    // on touch "tap" we toggle UI and don't trigger zoom (more natural)
+    toggleUI();
+  }
 
   // progress bar click to jump
   progressTrack.addEventListener('click', (e)=>{
@@ -312,7 +292,6 @@
     if(e.key === '-') { manualZoom(scale / 1.15); }
   });
 
-  // Zoom toggle & manual zoom
   function toggleZoom(){
     if(!pdf) return;
     if(zoomManual){
@@ -320,14 +299,13 @@
       queueRender(pageNum);
     } else {
       zoomManual = true;
-      manualZoom(1.0); // 100%
+      manualZoom(1.0);
     }
   }
 
   function manualZoom(val){
     zoomManual = true;
     scale = Math.max(0.25, Math.min(4, val));
-    // render current page with manual scale
     (async ()=>{
       if(!pdf) return;
       rendering = true;
@@ -361,13 +339,12 @@
     }, 160);
   });
 
-  // Fullscreen handling (desktop/android real fullscreen, iOS simulated)
+  // Fullscreen handling
   function isIOS(){
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   }
 
   fsBtn.addEventListener('click', async ()=>{
-    // desktop/Android real fullscreen
     if(!isIOS() && document.fullscreenEnabled){
       try {
         if(!document.fullscreenElement) await viewerRoot.requestFullscreen();
@@ -376,36 +353,31 @@
         console.warn('Fullscreen API falhou', e);
       }
     } else {
-      // iOS - simulate by toggling fixed full-screen class
       viewerRoot.classList.toggle('fake-fullscreen');
-      // rerender after layout change
       setTimeout(()=> queueRender(pageNum), 220);
     }
   });
 
-  // update fs icon if leave by ESC
   document.addEventListener('fullscreenchange', ()=> {
-    // no icon text change required; button remains ⤢
-    // but we can ensure rerender
     setTimeout(()=> queueRender(pageNum), 120);
   });
 
-  // auto-hide UI on inactivity (hide progressWrap and fsBtn)
+  // auto-hide UI on inactivity (hide progressWrap and fsBtn) AND notify parent
   let hideUITimer = null;
   function scheduleHideUI(){
     progressWrap.classList.remove('hidden-ui');
     fsBtn.classList.remove('hidden-ui');
+    postToggleUI(false); // informar parent que UI está visível
     clearTimeout(hideUITimer);
     hideUITimer = setTimeout(()=> {
       progressWrap.classList.add('hidden-ui');
       fsBtn.classList.add('hidden-ui');
+      postToggleUI(true); // informar parent que UI foi escondido
     }, 3000);
   }
-  // show UI on pointer move / touch
   ['mousemove','touchstart','wheel','touchmove'].forEach(ev=>{
     window.addEventListener(ev, scheduleHideUI, {passive:true});
   });
-  // start schedule
   scheduleHideUI();
 
   // expose basic goToPage for potential external calls
@@ -415,7 +387,6 @@
     queueRender(n);
   };
 
-  // end of async IIFE
 })();
 </script>
 </body>
