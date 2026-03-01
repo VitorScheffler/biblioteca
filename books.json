@@ -1,0 +1,58 @@
+[
+  {
+    "id": "harry-potter-1",
+    "title": "Harry Potter e a Pedra Filosofal",
+    "author": "J.K. Rowling",
+    "file": "/books/1 - Harry Potter e a Pedra Filosofal - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter1.jpg",
+    "description": "O início da jornada de Harry Potter ao descobrir que é um bruxo e ingressar na Escola de Magia e Bruxaria de Hogwarts."
+  },
+  {
+    "id": "harry-potter-2",
+    "title": "Harry Potter e a Câmara Secreta",
+    "author": "J.K. Rowling",
+    "file": "/books/2 - Harry Potter e a Câmara Secreta - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter2.jpg",
+    "description": "Harry retorna a Hogwarts e enfrenta um antigo mistério ligado à Câmara Secreta."
+  },
+  {
+    "id": "harry-potter-3",
+    "title": "Harry Potter e o Prisioneiro de Azkaban",
+    "author": "J.K. Rowling",
+    "file": "/books/3 - Harry Potter e o Prisioneiro de Azkaban - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter3.jpg",
+    "description": "A fuga de Sirius Black de Azkaban muda o terceiro ano de Harry em Hogwarts."
+  },
+  {
+    "id": "harry-potter-4",
+    "title": "Harry Potter e o Cálice de Fogo",
+    "author": "J.K. Rowling",
+    "file": "/books/4 - Harry Potter e o Cálice de Fogo - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter4.jpg",
+    "description": "Harry é misteriosamente inscrito no Torneio Tribruxo, enfrentando desafios mortais."
+  },
+  {
+    "id": "harry-potter-5",
+    "title": "Harry Potter e a Ordem da Fênix",
+    "author": "J.K. Rowling",
+    "file": "/books/5 - Harry Potter e a Ordem da Fênix - J.K. Rowling.pdf",
+    "cover": "/capas/harrypotter5.jpg",
+    "description": "Com o retorno de Voldemort, Harry enfrenta descrédito e uma nova ameaça em Hogwarts."
+  },
+  {
+    "id": "harry-potter-6",
+    "title": "Harry Potter e o Enigma do Príncipe",
+    "author": "J.K. Rowling",
+    "file": "/books/6 - Harry Potter e o Enigma do Principe - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter6.jpg",
+    "description": "Segredos sobre o passado de Voldemort vêm à tona enquanto a guerra se aproxima."
+  },
+  {
+    "id": "harry-potter-7",
+    "title": "Harry Potter e as Relíquias da Morte",
+    "author": "J.K. Rowling",
+    "file": "/books/7 - Harry Potter e as Relíquias da Morte - J.K. Rowling.pdf",
+    "cover": "capas/harrypotter7.jpg",
+    "description": "O confronto final entre Harry Potter e Lord Voldemort."
+  }
+]

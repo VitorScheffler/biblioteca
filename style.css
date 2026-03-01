@@ -1,0 +1,14 @@
+/* estilos gerais para index e viewer */
+body { -webkit-font-smoothing:antialiased; font-family: Inter, system-ui, "Helvetica Neue", Arial, sans-serif; }
+
+/* cards */
+.book-card { min-height: 170px; display:flex; flex-direction:column; }
+.book-cover { width:100%; height:180px; object-fit:cover; border-radius:6px 6px 0 0; background:#f2f2f2; display:flex; align-items:center; justify-content:center; }
+.book-body { padding: .75rem; flex:1; display:flex; flex-direction:column; justify-content:space-between; }
+
+/* placeholder capa */
+.cover-placeholder { font-size:48px; color:#6c757d; opacity:0.6; }
+
+/* dark theme helper (toggle via JS adds class .dark-theme no server required) */
+.dark-theme { background:#0b1220 !important; color:#e6eef8 !important; }
+.dark-theme .navbar, .dark-theme .card { background:#0f1724 !important; color:#e6eef8 !important; border-color:transparent; }

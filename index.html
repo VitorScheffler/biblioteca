@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minha Biblioteca — PDFs</title>
+
+  <!-- Bootstrap (apenas para modal) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#f6f7f9; margin:0; }
+    .navbar { background:#111827; color:#fff; }
+    .navbar .navbar-brand { color:#fff; }
+    .book-cover { height:200px; object-fit:cover; border-radius:6px 6px 0 0; }
+    .card { cursor:pointer; border-radius:8px; overflow:hidden; }
+    .card .card-body { padding:.6rem .75rem; }
+    .grid-wrap { padding:18px; max-width:1200px; margin:0 auto; }
+    .empty { text-align:center; color:#6b7280; padding:48px 0; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">📚 Minha Biblioteca</a>
+    </div>
+  </nav>
+
+  <main class="grid-wrap">
+    <div id="booksGrid" class="row g-3"></div>
+    <div id="emptyNotice" class="empty d-none">Nenhum livro encontrado. Verifique <code>books.json</code> e os caminhos.</div>
+  </main>
+
+  <!-- Reader Modal (fullscreen modal com iframe) -->
+  <div class="modal fade" id="readerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content bg-dark">
+        <div class="modal-header border-0">
+          <h5 class="modal-title text-light" id="readerTitle">Leitor</h5>
+          <div class="d-flex gap-2">
+            <button id="readerClearBtn" class="btn btn-sm btn-outline-light" title="Limpar progresso do livro">Limpar progresso</button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+        </div>
+        <div class="modal-body p-0" style="height:calc(100vh - 56px);">
+          <iframe id="readerIframe" class="w-100 h-100" style="border:0;" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS (modal) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
