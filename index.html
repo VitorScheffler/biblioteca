@@ -147,20 +147,28 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Modal do leitor */
-    #readerModal .modal-content {
-      background: #071019;
-      border: none;
-      border-radius: 20px 20px 0 0;
+    /* Modal do leitor - melhorias para desktop */
+    #readerModal .modal-dialog {
+      max-width: 95vw;
+      margin: 1.75rem auto;
     }
-
+    #readerModal .modal-content {
+      height: 90vh;
+      background: #071019;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      overflow: hidden;
+    }
+    #readerModal .modal-body {
+      height: calc(90vh - 60px);
+      padding: 0;
+    }
     #readerModal .modal-header {
       border-bottom: 1px solid rgba(255,255,255,0.1);
       padding: 0.75rem 1rem;
       background: rgba(7,16,25,0.95);
       backdrop-filter: blur(10px);
     }
-
     #readerModal .modal-title {
       font-weight: 600;
       font-size: 1rem;
@@ -184,17 +192,17 @@
       transform: scale(0.95);
     }
 
-    @media (max-width: 576px) {
+    @media (max-width: 768px) {
       #readerModal .modal-dialog {
-        margin: 0;
         max-width: 100%;
+        margin: 0;
       }
       #readerModal .modal-content {
+        height: 100vh;
         border-radius: 0;
-        min-height: 100vh;
       }
-      #readerIframe {
-        height: calc(100vh - 56px); /* 56px = altura do header */
+      #readerModal .modal-body {
+        height: calc(100vh - 56px);
       }
     }
   </style>
@@ -227,7 +235,7 @@
 
   <!-- Modal do leitor -->
   <div class="modal fade" id="readerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header" id="readerHeader">
           <div class="text-truncate pe-2">
@@ -367,7 +375,7 @@
         setTimeout(() => { readerClearBtn.textContent = '🗑️ Limpar'; }, 1500);
       });
 
-      // Recebe mensagens do viewer (esconder/mostrar cabeçalho)
+      // Recebe mensagens do viewer (esconder/mostrar cabeçalho e fechar)
       window.addEventListener('message', (ev) => {
         if (!ev.data || typeof ev.data !== 'object') return;
         const data = ev.data;
@@ -376,6 +384,11 @@
           header.classList.add('d-none');
         } else if (data.type === 'ui_shown') {
           header.classList.remove('d-none');
+        } else if (data.type === 'close_reader') {
+          // Fecha o modal se estiver aberto
+          const modalEl = document.getElementById('readerModal');
+          const modalInstance = bootstrap.Modal.getInstance(modalEl);
+          if (modalInstance) modalInstance.hide();
         }
       });
 
